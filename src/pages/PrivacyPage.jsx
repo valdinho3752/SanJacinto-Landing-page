@@ -204,7 +204,53 @@ export default function PrivacyPage({ onBackToHome, lang: initialLang = 'es', se
             </p>
           </section>
 
-          {/* Section 5: Contact */}
+          {/* Section 5: Cookies and Tracking Practices (Compliance Requirement) */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-navy-900">
+              {isEs ? '5. Prácticas de Cookies y Seguimiento' : '5. Cookies and Tracking Practices'}
+            </h2>
+            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+              {isEs ? (
+                <>Nuestro sitio web utiliza cookies técnicas y almacenamiento local esencial para mantener su sesión activa, recordar los servicios seleccionados en su carrito de compras y conservar sus preferencias de idioma. No empleamos cookies invasivas de terceros ni vendemos su historial de navegación a corredores de datos ni plataformas publicitarias. Usted puede configurar su navegador web para bloquear o eliminar cookies en cualquier momento.</>
+              ) : (
+                <>Our website utilizes essential technical cookies and local storage to keep your session active, remember items in your order cart, and preserve your language preferences. We do not use intrusive third-party tracking cookies or sell your browsing history to advertising data brokers. You may configure your web browser to block or delete cookies at any time.</>
+              )}
+            </p>
+          </section>
+
+          {/* Section 6: User Privacy Rights (Compliance Requirement) */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-black text-navy-900">
+              {isEs ? '6. Derechos de los Usuarios (Privacidad y CCPA)' : '6. User Privacy Rights (CCPA & Privacy Laws)'}
+            </h2>
+            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+              {isEs ? (
+                <>De conformidad con las leyes de privacidad aplicables, incluyendo la Ley de Privacidad del Consumidor de California (CCPA), usted tiene los siguientes derechos respecto a sus datos personales:</>
+              ) : (
+                <>In accordance with applicable privacy laws, including the California Consumer Privacy Act (CCPA), you maintain the following rights regarding your personal information:</>
+              )}
+            </p>
+            <ul className="space-y-1.5 text-sm text-slate-700 list-disc pl-5">
+              <li>
+                <strong>{isEs ? 'Derecho de Acceso:' : 'Right to Access:'}</strong>{' '}
+                {isEs ? 'Conocer qué datos personales recopilamos y cómo los utilizamos.' : 'Request details on the personal data we hold and how it is processed.'}
+              </li>
+              <li>
+                <strong>{isEs ? 'Derecho de Rectificación:' : 'Right to Rectification:'}</strong>{' '}
+                {isEs ? 'Solicitar la corrección de datos personales incompletos o inexactos.' : 'Request correction of inaccurate or incomplete personal information.'}
+              </li>
+              <li>
+                <strong>{isEs ? 'Derecho de Supresión (Eliminación):' : 'Right to Deletion:'}</strong>{' '}
+                {isEs ? 'Solicitar la eliminación definitiva de sus datos personales de nuestros registros.' : 'Request the deletion of your personal contact records from our active databases.'}
+              </li>
+              <li>
+                <strong>{isEs ? 'Derecho de No Discriminación:' : 'Right to Non-Discrimination:'}</strong>{' '}
+                {isEs ? 'Recibir el mismo nivel de atención odontológica sin discriminación al ejercer sus derechos.' : 'Receive the same quality of dental care without penalty when exercising your privacy rights.'}
+              </li>
+            </ul>
+          </section>
+
+          {/* Section 7: Contact */}
           <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-sm text-slate-700 space-y-2">
             <h3 className="font-black text-navy-900 text-base">
               {isEs ? 'Contacto del Responsable de Privacidad:' : 'Privacy Office Contact:'}

@@ -49,31 +49,7 @@ export default function CartModal({
       return;
     }
 
-    // Validación de casillas obligatorias de consentimiento (A2P / TCPA)
-    let hasConsentError = false;
-    if (!consentTransactional) {
-      setConsentErrorTransactional(true);
-      hasConsentError = true;
-    } else {
-      setConsentErrorTransactional(false);
-    }
-
-    if (!consentMarketing) {
-      setConsentErrorMarketing(true);
-      hasConsentError = true;
-    } else {
-      setConsentErrorMarketing(false);
-    }
-
-    if (hasConsentError) {
-      setFormError(
-        lang === 'es'
-          ? 'Debe marcar las casillas de consentimiento para poder confirmar su pedido.'
-          : 'You must check the consent checkboxes to confirm your order.'
-      );
-      return;
-    }
-
+    // Las casillas de consentimiento son opcionales (Cumplimiento A2P 10DLC)
     setFormError('');
     const code = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
     setOrderCode(code);
@@ -455,87 +431,31 @@ export default function CartModal({
                   />
                 </div>
 
-                {/* Consent Checkboxes (A2P 10DLC & TCPA Compliance) */}
+                {/* Consent Checkboxes (A2P 10DLC & TCPA Compliance - Unchecked by Default & Optional) */}
                 <div className="pt-2 space-y-3">
                   {/* Checkbox 1: Transactional */}
-                  <div
-                    className={`p-3 rounded-2xl border-2 transition-all ${
-                      consentErrorTransactional
-                        ? 'border-rose-500 bg-rose-50/90 ring-2 ring-rose-200'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                    }`}
-                  >
+                  <div className="p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-slate-300 transition-all">
                     <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs leading-relaxed text-slate-700">
                       <input
                         type="checkbox"
                         checked={consentTransactional}
-                        onChange={(e) => {
-                          setConsentTransactional(e.target.checked);
-                          if (e.target.checked) {
-                            setConsentErrorTransactional(false);
-                            if (consentMarketing) setFormError('');
-                          }
-                        }}
-                        className={`w-4 h-4 mt-0.5 rounded shrink-0 cursor-pointer ${
-                          consentErrorTransactional
-                            ? 'text-rose-600 border-rose-500 focus:ring-rose-500'
-                            : 'text-brand-blue border-slate-300 focus:ring-brand-blue'
-                        }`}
+                        onChange={(e) => setConsentTransactional(e.target.checked)}
+                        className="w-4 h-4 mt-0.5 rounded shrink-0 cursor-pointer text-brand-blue border-slate-300 focus:ring-brand-blue"
                       />
-                      <div>
-                        <span>{t.booking?.smsConsentTransactional}</span>
-                        {consentErrorTransactional && (
-                          <p className="text-xs font-bold text-rose-600 mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                            <span>
-                              {lang === 'es'
-                                ? 'Debe marcar esta casilla para poder confirmar su pedido.'
-                                : 'You must check this box to confirm your order.'}
-                            </span>
-                          </p>
-                        )}
-                      </div>
+                      <span>{t.booking?.smsConsentTransactional}</span>
                     </label>
                   </div>
 
                   {/* Checkbox 2: Marketing / Promotional */}
-                  <div
-                    className={`p-3 rounded-2xl border-2 transition-all ${
-                      consentErrorMarketing
-                        ? 'border-rose-500 bg-rose-50/90 ring-2 ring-rose-200'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                    }`}
-                  >
+                  <div className="p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-slate-300 transition-all">
                     <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs leading-relaxed text-slate-700">
                       <input
                         type="checkbox"
                         checked={consentMarketing}
-                        onChange={(e) => {
-                          setConsentMarketing(e.target.checked);
-                          if (e.target.checked) {
-                            setConsentErrorMarketing(false);
-                            if (consentTransactional) setFormError('');
-                          }
-                        }}
-                        className={`w-4 h-4 mt-0.5 rounded shrink-0 cursor-pointer ${
-                          consentErrorMarketing
-                            ? 'text-rose-600 border-rose-500 focus:ring-rose-500'
-                            : 'text-brand-blue border-slate-300 focus:ring-brand-blue'
-                        }`}
+                        onChange={(e) => setConsentMarketing(e.target.checked)}
+                        className="w-4 h-4 mt-0.5 rounded shrink-0 cursor-pointer text-brand-blue border-slate-300 focus:ring-brand-blue"
                       />
-                      <div>
-                        <span>{t.booking?.smsConsentMarketing}</span>
-                        {consentErrorMarketing && (
-                          <p className="text-xs font-bold text-rose-600 mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                            <span>
-                              {lang === 'es'
-                                ? 'Debe marcar esta casilla para poder confirmar su pedido.'
-                                : 'You must check this box to confirm your order.'}
-                            </span>
-                          </p>
-                        )}
-                      </div>
+                      <span>{t.booking?.smsConsentMarketing}</span>
                     </label>
                   </div>
                 </div>
