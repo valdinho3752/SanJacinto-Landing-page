@@ -108,6 +108,8 @@ export const translations = {
       step2: "2. Seleccione Fecha y Horario",
       step3: "3. Datos del Paciente",
       serviceOptions: [
+        "Consulta General",
+        "Nos conectamos contigo",
         "Primera Cita de Evaluación y Diagnóstico (Sin Costo)",
         "Full Set of Dentures ($1,518)",
         "Full Upper or Lower Dentures ($845)",
@@ -115,6 +117,8 @@ export const translations = {
         "Evaluación para Dentaduras Fijadas con Implantes",
         "Ajuste / Reparación de Dentadura Actual"
       ],
+      contactMeBtn: "Contáctenme",
+      contactOnlyNote: "No es necesario seleccionar fecha ni horario. Déjenos sus datos y un especialista se comunicará con usted a la brevedad.",
       selectDate: "Fecha preferida:",
       timeOfDay: "Preferencia de Horario:",
       morning: "Mañana (9:00 AM - 12:00 PM)",
@@ -270,6 +274,8 @@ export const translations = {
       step2: "2. Choose Date & Time",
       step3: "3. Patient Information",
       serviceOptions: [
+        "General Consultation",
+        "We'll Contact You",
         "First-Time Diagnostic Consultation (Free)",
         "Full Set of Dentures ($1,518)",
         "Full Upper or Lower Dentures ($845)",
@@ -277,6 +283,8 @@ export const translations = {
         "Implant-Secured Denture Evaluation",
         "Denture Adjustment / Repair"
       ],
+      contactMeBtn: "Contact Me",
+      contactOnlyNote: "No need to select date or time. Leave your contact info and our specialist will reach out shortly.",
       selectDate: "Preferred Date:",
       timeOfDay: "Preferred Time of Day:",
       morning: "Morning (9:00 AM - 12:00 PM)",

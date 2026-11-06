@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Calendar as CalendarIcon, Clock, User, Phone, Mail,
   CheckCircle, ShieldCheck, HeartHandshake, AlertCircle,
-  Check, Sparkles, MessageCircle, Send
+  Check, Sparkles, MessageCircle, Send, PhoneCall
 } from 'lucide-react';
 import { calendarConfig } from '../config/calendarConfig';
 import { sendLeadConnectorAppointment } from '../services/leadConnectorService';
@@ -11,6 +11,12 @@ export default function AppointmentSection({ t, initialService = "" }) {
   const [selectedService, setSelectedService] = useState(
     initialService || t.booking.serviceOptions[0]
   );
+
+  const isContactOnly =
+    selectedService === "Nos conectamos contigo" ||
+    selectedService === "We'll Contact You" ||
+    selectedService?.toLowerCase().includes("conectamos") ||
+    selectedService?.toLowerCase().includes("contact you");
 
   // Sync if initialService changes from parent props
   useEffect(() => {
@@ -86,7 +92,8 @@ export default function AppointmentSection({ t, initialService = "" }) {
 
     setFormError('');
     setIsSubmitting(true);
-    const randomCode = 'SJ-' + Math.floor(1000 + Math.random() * 9000);
+    const prefix = isContactOnly ? 'SJ-CONTACT-' : 'SJ-';
+    const randomCode = prefix + Math.floor(1000 + Math.random() * 9000);
     setAppointmentCode(randomCode);
 
     // Separar nombre y apellido para el CRM / Webhook
@@ -97,21 +104,22 @@ export default function AppointmentSection({ t, initialService = "" }) {
       ? 'Sí, agradeceré apoyo en la entrada'
       : 'No, me desplazo con normalidad';
 
-    // 1. Enviar datos a LeadConnector / CRM Webhook
+    // 1. Enviar datos a LeadConnector / CRM Webhook (Siempre se envía a GHL)
     sendLeadConnectorAppointment({
       firstName,
       lastName,
       phone: patientPhone.trim(),
       email: patientEmail.trim(),
       treatment: selectedService,
-      appointmentDate: date,
-      appointmentTime: timeSlot,
+      appointmentDate: isContactOnly ? "Por coordinar / Contactar" : date,
+      appointmentTime: isContactOnly ? "Por coordinar / Contactar" : timeSlot,
       wheelchairAssistance: wheelchairAssistanceText,
       notes: notes.trim()
     });
 
     // 2. Enviar payload a Google Apps Script Webhook (Google Calendar)
-    if (calendarConfig.googleAppsScriptWebhookUrl) {
+    // SÓLO si NO es "Nos conectamos contigo", ya que no requiere evento de Google Calendar
+    if (!isContactOnly && calendarConfig.googleAppsScriptWebhookUrl) {
       try {
         await fetch(calendarConfig.googleAppsScriptWebhookUrl, {
           method: 'POST',
@@ -152,6 +160,21 @@ export default function AppointmentSection({ t, initialService = "" }) {
   };
 
   const generateWhatsAppUrl = () => {
+    if (isContactOnly) {
+      const text = encodeURIComponent(
+        `Hola San Jacinto Center for Implants and Dentures,\n` +
+        `He solicitado que se pongan en contacto conmigo desde su página web:\n` +
+        `• Paciente: ${patientName}\n` +
+        `• Teléfono: ${patientPhone}\n` +
+        `• Correo: ${patientEmail}\n` +
+        `• Motivo: ${selectedService}\n` +
+        `• Código de Solicitud: ${appointmentCode}\n` +
+        (wheelchairHelp === 'yes' ? `• Requiere asistencia de movilidad: Sí\n` : '') +
+        (notes ? `• Notas: ${notes}\n` : '')
+      );
+      return `https://wa.me/14423742450?text=${text}`;
+    }
+
     const text = encodeURIComponent(
       `Hola San Jacinto Center for Implants and Dentures,\n` +
       `He agendado una cita desde su página web:\n` +
@@ -189,22 +212,30 @@ export default function AppointmentSection({ t, initialService = "" }) {
         <div className="bg-slate-50 border-2 border-slate-200 rounded-3xl p-6 sm:p-10 shadow-lg">
 
           {isSubmitted ? (
-            /* Confirmation Screen - No Google Calendar redirects! */
+            /* Confirmation Screen */
             <div className="text-center py-6 max-w-xl mx-auto">
               <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
                 <CheckCircle className="w-12 h-12" />
               </div>
 
               <div className="inline-block bg-navy-900 text-amber-300 font-black px-4 py-1.5 rounded-full text-sm mb-3">
-                Código de Cita: {appointmentCode}
+                {isContactOnly ? `Código de Solicitud: ${appointmentCode}` : `Código de Cita: ${appointmentCode}`}
               </div>
 
               <h3 className="text-2xl sm:text-3xl font-black text-navy-900 mb-2">
-                ¡Cita Agendada con Éxito!
+                {isContactOnly ? '¡Solicitud Recibida con Éxito!' : '¡Cita Agendada con Éxito!'}
               </h3>
 
               <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed">
-                Su cita ha quedado registrada en la agenda de <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Hemos enviado la confirmación e invitación a: <strong className="text-brand-blue">{patientEmail}</strong> y al equipo de la clínica.
+                {isContactOnly ? (
+                  <>
+                    Hemos recibido sus datos en <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Un especialista de nuestro equipo se comunicará con usted a la brevedad al teléfono <strong className="text-navy-900">{patientPhone}</strong> o correo <strong className="text-brand-blue">{patientEmail}</strong>.
+                  </>
+                ) : (
+                  <>
+                    Su cita ha quedado registrada en la agenda de <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Hemos enviado la confirmación e invitación a: <strong className="text-brand-blue">{patientEmail}</strong> y al equipo de la clínica.
+                  </>
+                )}
               </p>
 
               {/* Appointment summary recap */}
@@ -222,17 +253,26 @@ export default function AppointmentSection({ t, initialService = "" }) {
                   <span className="font-bold text-brand-blue">{patientEmail}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500 font-semibold">Tratamiento:</span>
+                  <span className="text-slate-500 font-semibold">Tratamiento / Motivo:</span>
                   <span className="font-bold text-navy-900 text-right">{selectedService}</span>
                 </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500 font-semibold">Fecha:</span>
-                  <span className="font-bold text-navy-900">{date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Hora:</span>
-                  <span className="font-black text-emerald-700 text-base">{timeSlot}</span>
-                </div>
+                {!isContactOnly ? (
+                  <>
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-slate-500 font-semibold">Fecha:</span>
+                      <span className="font-bold text-navy-900">{date}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 font-semibold">Hora:</span>
+                      <span className="font-black text-emerald-700 text-base">{timeSlot}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">Modalidad:</span>
+                    <span className="font-black text-emerald-700 text-base">Contacto Telefónico / WhatsApp</span>
+                  </div>
+                )}
                 {wheelchairHelp === 'yes' && (
                   <div className="pt-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg flex items-center gap-1.5 border border-amber-200">
                     <HeartHandshake className="w-4 h-4 shrink-0" />
@@ -250,7 +290,12 @@ export default function AppointmentSection({ t, initialService = "" }) {
                   className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base py-3.5 px-6 rounded-2xl shadow transition-all"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  <span>Enviar Confirmación por WhatsApp a la Clínica</span>
+                  <span>
+                    {isContactOnly
+                      ? 'Contactar Directamente por WhatsApp a la Clínica'
+                      : 'Enviar Confirmación por WhatsApp a la Clínica'
+                    }
+                  </span>
                 </a>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -258,7 +303,7 @@ export default function AppointmentSection({ t, initialService = "" }) {
                     onClick={handleReset}
                     className="flex-1 bg-navy-900 hover:bg-navy-800 text-white font-bold py-3.5 px-6 rounded-2xl transition-colors text-base"
                   >
-                    Agendar Otra Cita
+                    {isContactOnly ? 'Enviar Otra Solicitud' : 'Agendar Otra Cita'}
                   </button>
 
                   <a
@@ -290,92 +335,123 @@ export default function AppointmentSection({ t, initialService = "" }) {
                   <span>Seleccione el Tratamiento o Consulta</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {t.booking.serviceOptions.map((opt, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setSelectedService(opt)}
-                      className={`p-3.5 rounded-xl border-2 text-left font-bold transition-all flex items-center justify-between text-sm ${selectedService === opt
-                          ? 'bg-blue-50 border-brand-blue text-navy-900 ring-2 ring-blue-200'
-                          : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                  {t.booking.serviceOptions.map((opt, i) => {
+                    const isOptionContact =
+                      opt === "Nos conectamos contigo" ||
+                      opt === "We'll Contact You" ||
+                      opt?.toLowerCase().includes("conectamos");
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setSelectedService(opt)}
+                        className={`p-3.5 rounded-xl border-2 text-left font-bold transition-all flex items-center justify-between text-sm ${
+                          selectedService === opt
+                            ? 'bg-blue-50 border-brand-blue text-navy-900 ring-2 ring-blue-200'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
                         }`}
-                    >
-                      <span>{opt}</span>
-                      {selectedService === opt && (
-                        <Check className="w-4 h-4 text-brand-blue shrink-0 ml-2" />
-                      )}
-                    </button>
-                  ))}
+                      >
+                        <span className="flex items-center gap-2">
+                          {isOptionContact && (
+                            <PhoneCall className="w-4 h-4 text-emerald-600 shrink-0" />
+                          )}
+                          <span>{opt}</span>
+                        </span>
+                        {selectedService === opt && (
+                          <Check className="w-4 h-4 text-brand-blue shrink-0 ml-2" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {/* Banner when 'Nos conectamos contigo' is selected */}
+                {isContactOnly && (
+                  <div className="mt-4 p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl flex items-start gap-3 text-emerald-950 text-sm">
+                    <PhoneCall className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-extrabold text-emerald-900 text-base">
+                        ¡Nos comunicaremos directamente con usted!
+                      </p>
+                      <p className="text-emerald-800 text-xs sm:text-sm mt-0.5 leading-relaxed">
+                        {t.booking.contactOnlyNote || "No es necesario seleccionar fecha ni horario. Complete sus datos de contacto y nuestro equipo le llamará o escribirá a la brevedad."}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Step 2: Date & Time */}
-              <div>
-                <label className="block text-base sm:text-lg font-black text-navy-900 mb-3 flex items-center gap-2">
-                  <span className="w-7 h-7 bg-brand-blue text-white rounded-full text-sm flex items-center justify-center font-bold">2</span>
-                  <span>Seleccione Fecha y Horario</span>
-                </label>
-
-                {/* Quick days buttons */}
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3">
-                  {upcomingDays.map((d) => (
-                    <button
-                      key={d.dateStr}
-                      type="button"
-                      onClick={() => setDate(d.dateStr)}
-                      className={`p-2.5 rounded-xl border-2 text-center transition-all ${date === d.dateStr
-                          ? 'bg-brand-blue text-white border-brand-blue shadow-md scale-105'
-                          : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
-                        }`}
-                    >
-                      <span className="block text-[11px] uppercase font-extrabold">{d.dayName}</span>
-                      <span className="block text-xl font-black">{d.dayNum}</span>
-                      <span className="block text-[10px] capitalize opacity-80">{d.monthName}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Date input fallback */}
-                <div className="mb-4">
-                  <input
-                    type="date"
-                    min={getTomorrowDate()}
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full p-3 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-navy-900 focus:border-brand-blue"
-                    required
-                  />
-                </div>
-
-                {/* Time selection buttons */}
+              {/* Step 2: Date & Time - ONLY VISIBLE IF NOT isContactOnly */}
+              {!isContactOnly && (
                 <div>
-                  <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Horas Disponibles:
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {['08:30 AM', '09:30 AM', '10:30 AM', '11:30 AM', '01:30 PM', '02:30 PM', '03:30 PM', '04:15 PM'].map((slot) => (
+                  <label className="block text-base sm:text-lg font-black text-navy-900 mb-3 flex items-center gap-2">
+                    <span className="w-7 h-7 bg-brand-blue text-white rounded-full text-sm flex items-center justify-center font-bold">2</span>
+                    <span>Seleccione Fecha y Horario</span>
+                  </label>
+
+                  {/* Quick days buttons */}
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3">
+                    {upcomingDays.map((d) => (
                       <button
-                        key={slot}
+                        key={d.dateStr}
                         type="button"
-                        onClick={() => setTimeSlot(slot)}
-                        className={`p-3 rounded-xl border-2 font-black text-sm transition-all flex items-center justify-center gap-1.5 ${timeSlot === slot
-                            ? 'bg-navy-900 text-amber-300 border-navy-900 shadow-md ring-2 ring-navy-800'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-brand-blue hover:bg-blue-50/50'
+                        onClick={() => setDate(d.dateStr)}
+                        className={`p-2.5 rounded-xl border-2 text-center transition-all ${date === d.dateStr
+                            ? 'bg-brand-blue text-white border-brand-blue shadow-md scale-105'
+                            : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                       >
-                        <Clock className="w-3.5 h-3.5 opacity-70" />
-                        <span>{slot}</span>
+                        <span className="block text-[11px] uppercase font-extrabold">{d.dayName}</span>
+                        <span className="block text-xl font-black">{d.dayNum}</span>
+                        <span className="block text-[10px] capitalize opacity-80">{d.monthName}</span>
                       </button>
                     ))}
                   </div>
-                </div>
-              </div>
 
-              {/* Step 3: Patient Information */}
+                  {/* Date input fallback */}
+                  <div className="mb-4">
+                    <input
+                      type="date"
+                      min={getTomorrowDate()}
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full p-3 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-navy-900 focus:border-brand-blue"
+                      required={!isContactOnly}
+                    />
+                  </div>
+
+                  {/* Time selection buttons */}
+                  <div>
+                    <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Horas Disponibles:
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {['08:30 AM', '09:30 AM', '10:30 AM', '11:30 AM', '01:30 PM', '02:30 PM', '03:30 PM', '04:15 PM'].map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setTimeSlot(slot)}
+                          className={`p-3 rounded-xl border-2 font-black text-sm transition-all flex items-center justify-center gap-1.5 ${timeSlot === slot
+                              ? 'bg-navy-900 text-amber-300 border-navy-900 shadow-md ring-2 ring-navy-800'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-brand-blue hover:bg-blue-50/50'
+                            }`}
+                        >
+                          <Clock className="w-3.5 h-3.5 opacity-70" />
+                          <span>{slot}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3 (or Step 2 if contact only): Patient Information */}
               <div>
                 <label className="block text-base sm:text-lg font-black text-navy-900 mb-3 flex items-center gap-2">
-                  <span className="w-7 h-7 bg-brand-blue text-white rounded-full text-sm flex items-center justify-center font-bold">3</span>
-                  <span>Datos del Paciente</span>
+                  <span className="w-7 h-7 bg-brand-blue text-white rounded-full text-sm flex items-center justify-center font-bold">
+                    {isContactOnly ? '2' : '3'}
+                  </span>
+                  <span>{isContactOnly ? 'Sus Datos de Contacto' : 'Datos del Paciente'}</span>
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -419,7 +495,7 @@ export default function AppointmentSection({ t, initialService = "" }) {
                 {/* Email for Calendar Invitation */}
                 <div className="mt-4">
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">
-                    Correo Electrónico (Para recibir la confirmación e invitación):
+                    Correo Electrónico (Para recibir confirmación):
                   </label>
                   <div className="relative">
                     <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -433,7 +509,10 @@ export default function AppointmentSection({ t, initialService = "" }) {
                     />
                   </div>
                   <span className="block text-xs text-slate-500 mt-1">
-                    Le enviaremos la invitación de la cita a este correo tanto a usted como a la clínica.
+                    {isContactOnly
+                      ? 'Le enviaremos un correo de confirmación de su solicitud.'
+                      : 'Le enviaremos la invitación de la cita a este correo tanto a usted como a la clínica.'
+                    }
                   </span>
                 </div>
 
@@ -471,11 +550,11 @@ export default function AppointmentSection({ t, initialService = "" }) {
                 {/* Notes */}
                 <div className="mt-4">
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-                    Notas adicionales (Opcional):
+                    {isContactOnly ? '¿En qué horario o tema prefiere que le contactemos? (Opcional):' : 'Notas adicionales (Opcional):'}
                   </label>
                   <input
                     type="text"
-                    placeholder="Escriba aquí alguna preferencia o duda..."
+                    placeholder={isContactOnly ? "Ej. Prefiero llamada por la mañana, consulta de dentadura..." : "Escriba aquí alguna preferencia o duda..."}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:border-brand-blue"
@@ -490,17 +569,29 @@ export default function AppointmentSection({ t, initialService = "" }) {
                   disabled={isSubmitting}
                   className="w-full py-4 sm:py-5 px-6 bg-brand-blue hover:bg-brand-hover text-white text-base sm:text-lg font-black rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <Send className="w-5 h-5" />
-                  <span>
-                    {isSubmitting
-                      ? 'Agendando y Enviando Invitación...'
-                      : `Confirmar Cita para el ${date} a las ${timeSlot}`
-                    }
-                  </span>
+                  {isContactOnly ? (
+                    <>
+                      <PhoneCall className="w-5 h-5 text-amber-300" />
+                      <span>{isSubmitting ? 'Enviando solicitud...' : (t.booking.contactMeBtn || 'Contáctenme')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" />
+                      <span>
+                        {isSubmitting
+                          ? 'Agendando y Enviando Invitación...'
+                          : `Confirmar Cita para el ${date} a las ${timeSlot}`
+                        }
+                      </span>
+                    </>
+                  )}
                 </button>
 
                 <p className="text-center text-xs text-slate-500 mt-2.5">
-                  Al confirmar, se enviará la invitación por correo electrónico tanto a usted como a la clínica.
+                  {isContactOnly
+                    ? 'Al presionar "Contáctenme", nuestro equipo recibirá sus datos para comunicarse con usted a la brevedad.'
+                    : 'Al confirmar, se enviará la invitación por correo electrónico tanto a usted como a la clínica.'
+                  }
                 </p>
               </div>
 

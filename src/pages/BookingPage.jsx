@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   ArrowLeft, Calendar as CalendarIcon, Clock, User, Phone, Mail, 
   CheckCircle, ShieldCheck, HeartHandshake, AlertCircle, ExternalLink, 
-  Check, Info, Sparkles, MessageCircle, Eye, CalendarCheck, Settings, Copy
+  Check, Info, Sparkles, MessageCircle, Eye, CalendarCheck, Settings, Copy, PhoneCall
 } from 'lucide-react';
 import { calendarConfig } from '../config/calendarConfig';
 import { sendLeadConnectorAppointment } from '../services/leadConnectorService';
@@ -19,6 +19,12 @@ export default function BookingPage({
   const [selectedService, setSelectedService] = useState(
     initialService || t.booking.serviceOptions[0]
   );
+  
+  const isContactOnly = 
+    selectedService === "Nos conectamos contigo" || 
+    selectedService === "We'll Contact You" ||
+    selectedService?.toLowerCase().includes("conectamos") ||
+    selectedService?.toLowerCase().includes("contact you");
   
   // Format local Date to YYYY-MM-DD avoiding UTC timezone shift
   const formatLocalDate = (d) => {
@@ -120,6 +126,20 @@ export default function BookingPage({
 
   // WhatsApp notification link to clinic phone +1 4423742450
   const generateWhatsAppUrl = () => {
+    if (isContactOnly) {
+      const text = encodeURIComponent(
+        `Hola San Jacinto Center for Implants and Dentures,\n` +
+        `He solicitado que se pongan en contacto conmigo desde su página web:\n` +
+        `• Código: ${appointmentCode}\n` +
+        `• Paciente: ${patientName}\n` +
+        `• Teléfono: ${patientPhone}\n` +
+        `• Asunto: ${selectedService}\n` +
+        (wheelchairHelp === 'yes' ? `• Requiere asistencia de movilidad: Sí\n` : '') +
+        (notes ? `• Notas: ${notes}\n` : '')
+      );
+      return `https://wa.me/14423742450?text=${text}`;
+    }
+
     const text = encodeURIComponent(
       `Hola San Jacinto Center for Implants and Dentures,\n` +
       `He reservado una cita a través de la página web:\n` +
@@ -222,7 +242,8 @@ export default function BookingPage({
 
     setFormError('');
     setIsSubmitting(true);
-    const code = 'SJ-CAL-' + Math.floor(1000 + Math.random() * 9000);
+    const prefix = isContactOnly ? 'SJ-CONTACT-' : 'SJ-CAL-';
+    const code = prefix + Math.floor(1000 + Math.random() * 9000);
     setAppointmentCode(code);
 
     // Separar nombre y apellido para el CRM / Webhook
@@ -233,21 +254,22 @@ export default function BookingPage({
       ? (lang === 'es' ? 'Sí, agradeceré apoyo en la entrada' : 'Yes, assistance required')
       : (lang === 'es' ? 'No, me desplazo con normalidad' : 'No assistance required');
 
-    // 1. Enviar datos a LeadConnector / CRM Webhook
+    // 1. Enviar datos a LeadConnector / CRM Webhook (Siempre se conecta a GHL)
     sendLeadConnectorAppointment({
       firstName,
       lastName,
       phone: patientPhone.trim(),
       email: patientEmail.trim(),
       treatment: selectedService,
-      appointmentDate: selectedDate,
-      appointmentTime: selectedTime,
+      appointmentDate: isContactOnly ? "Por coordinar / Contactar" : selectedDate,
+      appointmentTime: isContactOnly ? "Por coordinar / Contactar" : selectedTime,
       wheelchairAssistance: wheelchairAssistanceText,
       notes: notes.trim()
     });
 
     // 2. If Google Apps Script Webhook is configured, send in background
-    if (calendarConfig.googleAppsScriptWebhookUrl) {
+    // SÓLO si NO es "Nos conectamos contigo", ya que no tiene fecha/hora para agendar en Google Calendar
+    if (!isContactOnly && calendarConfig.googleAppsScriptWebhookUrl) {
       try {
         await fetch(calendarConfig.googleAppsScriptWebhookUrl, {
           method: 'POST',
@@ -436,15 +458,23 @@ export default function BookingPage({
                 </div>
 
                 <div className="inline-block bg-navy-900 text-amber-300 font-black px-4 py-1.5 rounded-full text-sm mb-3">
-                  Código de Cita: {appointmentCode}
+                  {isContactOnly ? `Código de Solicitud: ${appointmentCode}` : `Código de Cita: ${appointmentCode}`}
                 </div>
 
                 <h2 className="text-2xl sm:text-4xl font-black text-navy-900 mb-2">
-                  ¡Invitación Enviada a su Correo!
+                  {isContactOnly ? '¡Solicitud Recibida con Éxito!' : '¡Invitación Enviada a su Correo!'}
                 </h2>
 
                 <p className="text-slate-600 text-base sm:text-lg mb-8 leading-relaxed">
-                  Le esperamos en <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Se ha enviado la invitación oficial de calendario tanto a su correo (<strong className="text-brand-blue">{patientEmail}</strong>) como a la clínica para que quede agendada.
+                  {isContactOnly ? (
+                    <>
+                      Hemos recibido sus datos en <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Un especialista de nuestro equipo se comunicará con usted a la brevedad al teléfono <strong className="text-navy-900">{patientPhone}</strong> o correo <strong className="text-brand-blue">{patientEmail}</strong>.
+                    </>
+                  ) : (
+                    <>
+                      Le esperamos en <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Se ha enviado la invitación oficial de calendario tanto a su correo (<strong className="text-brand-blue">{patientEmail}</strong>) como a la clínica para que quede agendada.
+                    </>
+                  )}
                 </p>
 
                 {/* Recap Box */}
@@ -458,21 +488,30 @@ export default function BookingPage({
                     <span className="font-black text-navy-900 text-base">{patientPhone}</span>
                   </div>
                   <div className="flex justify-between border-b border-slate-200 pb-2.5">
-                    <span className="text-slate-500 font-bold">Correo de Invitación:</span>
+                    <span className="text-slate-500 font-bold">Correo:</span>
                     <span className="font-black text-brand-blue text-base">{patientEmail}</span>
                   </div>
                   <div className="flex justify-between border-b border-slate-200 pb-2.5">
-                    <span className="text-slate-500 font-bold">Tratamiento:</span>
+                    <span className="text-slate-500 font-bold">Tratamiento / Motivo:</span>
                     <span className="font-black text-brand-blue text-base text-right">{selectedService}</span>
                   </div>
-                  <div className="flex justify-between border-b border-slate-200 pb-2.5">
-                    <span className="text-slate-500 font-bold">Fecha:</span>
-                    <span className="font-black text-navy-900 text-base">{selectedDate}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-200 pb-2.5">
-                    <span className="text-slate-500 font-bold">Hora:</span>
-                    <span className="font-black text-emerald-700 text-lg">{selectedTime}</span>
-                  </div>
+                  {!isContactOnly ? (
+                    <>
+                      <div className="flex justify-between border-b border-slate-200 pb-2.5">
+                        <span className="text-slate-500 font-bold">Fecha:</span>
+                        <span className="font-black text-navy-900 text-base">{selectedDate}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-200 pb-2.5">
+                        <span className="text-slate-500 font-bold">Hora:</span>
+                        <span className="font-black text-emerald-700 text-lg">{selectedTime}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between border-b border-slate-200 pb-2.5">
+                      <span className="text-slate-500 font-bold">Modalidad:</span>
+                      <span className="font-black text-emerald-700 text-base">Contacto Telefónico / WhatsApp</span>
+                    </div>
+                  )}
                   {wheelchairHelp === 'yes' && (
                     <div className="p-3 bg-amber-50 rounded-xl text-amber-900 text-xs font-bold flex items-center gap-2 border border-amber-200">
                       <HeartHandshake className="w-5 h-5 text-amber-600 shrink-0" />
@@ -484,28 +523,30 @@ export default function BookingPage({
                 {/* 1-Click Action Buttons */}
                 <div className="space-y-3.5">
                   
-                  {/* Google Calendar 1-Click Button - Inviting Ernesto's clinic calendar */}
-                  <div className="p-4 bg-sky-50 rounded-2xl border-2 border-brand-blue/40 text-left">
-                    <div className="flex items-center gap-2 font-bold text-navy-900 text-sm mb-2">
-                      <Sparkles className="w-4 h-4 text-brand-blue" />
-                      <span>Paso Final para Guardar en el Calendario:</span>
+                  {/* Google Calendar 1-Click Button - Inviting Ernesto's clinic calendar (only if not contact only) */}
+                  {!isContactOnly && (
+                    <div className="p-4 bg-sky-50 rounded-2xl border-2 border-brand-blue/40 text-left">
+                      <div className="flex items-center gap-2 font-bold text-navy-900 text-sm mb-2">
+                        <Sparkles className="w-4 h-4 text-brand-blue" />
+                        <span>Paso Final para Guardar en el Calendario:</span>
+                      </div>
+                      <p className="text-xs text-slate-600 mb-3">
+                        Haga clic en el botón de abajo. Se abrirá Google Calendar con los datos de su cita y la invitación directa a la clínica para que guarde el evento con 1 solo clic:
+                      </p>
+                      <a
+                        href={generateGoogleCalendarUrl()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-3 bg-brand-blue hover:bg-brand-hover text-white font-black text-base sm:text-lg py-4 px-6 rounded-2xl shadow-lg transition-all"
+                      >
+                        <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24">
+                          <path fill="#ffffff" d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" />
+                        </svg>
+                        <span>Guardar en Google Calendar Ahora</span>
+                        <ExternalLink className="w-5 h-5 text-amber-300" />
+                      </a>
                     </div>
-                    <p className="text-xs text-slate-600 mb-3">
-                      Haga clic en el botón de abajo. Se abrirá Google Calendar con los datos de su cita y la invitación directa a la clínica para que guarde el evento con 1 solo clic:
-                    </p>
-                    <a
-                      href={generateGoogleCalendarUrl()}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full inline-flex items-center justify-center gap-3 bg-brand-blue hover:bg-brand-hover text-white font-black text-base sm:text-lg py-4 px-6 rounded-2xl shadow-lg transition-all"
-                    >
-                      <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24">
-                        <path fill="#ffffff" d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" />
-                      </svg>
-                      <span>Guardar en Google Calendar Ahora</span>
-                      <ExternalLink className="w-5 h-5 text-amber-300" />
-                    </a>
-                  </div>
+                  )}
 
                   {/* Send to WhatsApp Confirmation */}
                   <a
@@ -515,7 +556,12 @@ export default function BookingPage({
                     className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base py-3.5 px-6 rounded-2xl shadow transition-all"
                   >
                     <MessageCircle className="w-5 h-5" />
-                    <span>Enviar Resumen por WhatsApp a la Clínica (+1 442-374-2450)</span>
+                    <span>
+                      {isContactOnly
+                        ? 'Enviar Solicitud por WhatsApp a la Clínica (+1 442-374-2450)'
+                        : 'Enviar Resumen por WhatsApp a la Clínica (+1 442-374-2450)'
+                      }
+                    </span>
                   </a>
 
                   <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -564,174 +610,205 @@ export default function BookingPage({
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {t.booking.serviceOptions.map((opt, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setSelectedService(opt)}
-                        className={`p-4 rounded-2xl border-2 text-left font-bold transition-all flex items-center justify-between ${
-                          selectedService === opt
-                            ? 'bg-blue-50 border-brand-blue text-navy-900 ring-2 ring-blue-200 shadow-sm'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <span className="text-sm sm:text-base leading-snug">{opt}</span>
-                        {selectedService === opt && (
-                          <Check className="w-5 h-5 text-brand-blue shrink-0 ml-2" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Step 2: Date */}
-                <div>
-                  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-full bg-brand-blue text-white flex items-center justify-center font-black text-sm">
-                        2
-                      </span>
-                      <h2 className="text-xl sm:text-2xl font-black text-navy-900">
-                        Seleccione el Día Disponible
-                      </h2>
-                    </div>
-                    <span className="text-xs text-slate-500 font-semibold">
-                      Atención de Lunes a Sábado
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2.5 mb-4">
-                    {upcomingDays.slice(0, 7).map((d) => {
-                      const isSelected = selectedDate === d.dateStr;
+                    {t.booking.serviceOptions.map((opt, i) => {
+                      const isOptionContact =
+                        opt === "Nos conectamos contigo" ||
+                        opt === "We'll Contact You" ||
+                        opt?.toLowerCase().includes("conectamos");
                       return (
                         <button
-                          key={d.dateStr}
+                          key={i}
                           type="button"
-                          onClick={() => setSelectedDate(d.dateStr)}
-                          className={`p-3 rounded-2xl border-2 text-center transition-all ${
-                            isSelected
-                              ? 'bg-brand-blue text-white border-brand-blue shadow-md scale-105'
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                          onClick={() => setSelectedService(opt)}
+                          className={`p-4 rounded-2xl border-2 text-left font-bold transition-all flex items-center justify-between ${
+                            selectedService === opt
+                              ? 'bg-blue-50 border-brand-blue text-navy-900 ring-2 ring-blue-200 shadow-sm'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
                           }`}
                         >
-                          <span className="block text-xs uppercase font-extrabold tracking-wider">
-                            {d.dayName}
+                          <span className="flex items-center gap-2 text-sm sm:text-base leading-snug">
+                            {isOptionContact && (
+                              <PhoneCall className="w-5 h-5 text-emerald-600 shrink-0" />
+                            )}
+                            <span>{opt}</span>
                           </span>
-                          <span className="block text-2xl font-black my-0.5">
-                            {d.dayNum}
-                          </span>
-                          <span className="block text-xs font-semibold capitalize opacity-80">
-                            {d.monthName}
-                          </span>
+                          {selectedService === opt && (
+                            <Check className="w-5 h-5 text-brand-blue shrink-0 ml-2" />
+                          )}
                         </button>
                       );
                     })}
                   </div>
 
-                  <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-sm">
-                    <CalendarIcon className="w-5 h-5 text-brand-blue shrink-0" />
-                    <span className="font-bold text-slate-700">O elija otra fecha específica:</span>
-                    <input
-                      type="date"
-                      min={getInitialDate()}
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="p-2 bg-white border border-slate-300 rounded-xl font-bold text-navy-900 focus:border-brand-blue"
-                    />
-                  </div>
+                  {/* Banner when 'Nos conectamos contigo' is selected */}
+                  {isContactOnly && (
+                    <div className="mt-4 p-4 sm:p-5 bg-emerald-50 border-2 border-emerald-300 rounded-2xl flex items-start gap-3.5 text-emerald-950 text-sm">
+                      <PhoneCall className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-black text-emerald-900 text-base sm:text-lg">
+                          ¡Nos comunicaremos directamente con usted!
+                        </p>
+                        <p className="text-emerald-800 text-xs sm:text-sm mt-1 leading-relaxed">
+                          {t.booking.contactOnlyNote || "No es necesario seleccionar fecha ni horario. Complete sus datos de contacto y nuestro equipo le llamará o escribirá a la brevedad."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Step 3: Available Hours */}
+                {/* Step 2: Date & Step 3: Hours - ONLY VISIBLE IF NOT isContactOnly */}
+                {!isContactOnly && (
+                  <>
+                    {/* Step 2: Date */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-full bg-brand-blue text-white flex items-center justify-center font-black text-sm">
+                            2
+                          </span>
+                          <h2 className="text-xl sm:text-2xl font-black text-navy-900">
+                            Seleccione el Día Disponible
+                          </h2>
+                        </div>
+                        <span className="text-xs text-slate-500 font-semibold">
+                          Atención de Lunes a Sábado
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2.5 mb-4">
+                        {upcomingDays.slice(0, 7).map((d) => {
+                          const isSelected = selectedDate === d.dateStr;
+                          return (
+                            <button
+                              key={d.dateStr}
+                              type="button"
+                              onClick={() => setSelectedDate(d.dateStr)}
+                              className={`p-3 rounded-2xl border-2 text-center transition-all ${
+                                isSelected
+                                  ? 'bg-brand-blue text-white border-brand-blue shadow-md scale-105'
+                                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <span className="block text-xs uppercase font-extrabold tracking-wider">
+                                {d.dayName}
+                              </span>
+                              <span className="block text-2xl font-black my-0.5">
+                                {d.dayNum}
+                              </span>
+                              <span className="block text-xs font-semibold capitalize opacity-80">
+                                {d.monthName}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-sm">
+                        <CalendarIcon className="w-5 h-5 text-brand-blue shrink-0" />
+                        <span className="font-bold text-slate-700">O elija otra fecha específica:</span>
+                        <input
+                          type="date"
+                          min={getInitialDate()}
+                          value={selectedDate}
+                          onChange={(e) => setSelectedDate(e.target.value)}
+                          className="p-2 bg-white border border-slate-300 rounded-xl font-bold text-navy-900 focus:border-brand-blue"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Step 3: Available Hours */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="w-8 h-8 rounded-full bg-brand-blue text-white flex items-center justify-center font-black text-sm">
+                          3
+                        </span>
+                        <h2 className="text-xl sm:text-2xl font-black text-navy-900">
+                          Seleccione la Hora
+                        </h2>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <span className="text-xs uppercase font-extrabold text-slate-500 tracking-wider block mb-2">
+                            Turno de la Mañana (8:30 AM - 12:00 PM)
+                          </span>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            {calendarConfig.defaultAvailableSlots.morning.map((slot) => (
+                              <button
+                                key={slot.time}
+                                type="button"
+                                onClick={() => setSelectedTime(slot.time)}
+                                className={`p-3.5 rounded-2xl border-2 font-black text-sm sm:text-base transition-all ${
+                                  selectedTime === slot.time
+                                    ? 'bg-navy-900 text-amber-300 border-navy-900 shadow-md ring-2 ring-navy-800'
+                                    : 'bg-white text-slate-800 border-slate-200 hover:border-brand-blue hover:bg-blue-50/50'
+                                }`}
+                              >
+                                <Clock className="w-4 h-4 inline mr-1.5 opacity-70" />
+                                <span>{slot.time}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-xs uppercase font-extrabold text-slate-500 tracking-wider block mb-2">
+                            Turno del Mediodía (12:30 PM - 3:00 PM)
+                          </span>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            {calendarConfig.defaultAvailableSlots.midday.map((slot) => (
+                              <button
+                                key={slot.time}
+                                type="button"
+                                onClick={() => setSelectedTime(slot.time)}
+                                className={`p-3.5 rounded-2xl border-2 font-black text-sm sm:text-base transition-all ${
+                                  selectedTime === slot.time
+                                    ? 'bg-navy-900 text-amber-300 border-navy-900 shadow-md ring-2 ring-navy-800'
+                                    : 'bg-white text-slate-800 border-slate-200 hover:border-brand-blue hover:bg-blue-50/50'
+                                }`}
+                              >
+                                <Clock className="w-4 h-4 inline mr-1.5 opacity-70" />
+                                <span>{slot.time}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-xs uppercase font-extrabold text-slate-500 tracking-wider block mb-2">
+                            Turno de la Tarde (3:30 PM - 5:00 PM)
+                          </span>
+                          <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5">
+                            {calendarConfig.defaultAvailableSlots.afternoon.map((slot) => (
+                              <button
+                                key={slot.time}
+                                type="button"
+                                onClick={() => setSelectedTime(slot.time)}
+                                className={`p-3.5 rounded-2xl border-2 font-black text-sm sm:text-base transition-all ${
+                                  selectedTime === slot.time
+                                    ? 'bg-navy-900 text-amber-300 border-navy-900 shadow-md ring-2 ring-navy-800'
+                                    : 'bg-white text-slate-800 border-slate-200 hover:border-brand-blue hover:bg-blue-50/50'
+                                }`}
+                              >
+                                <Clock className="w-4 h-4 inline mr-1.5 opacity-70" />
+                                <span>{slot.time}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Step 4 (or Step 2 if contact only): Patient Info */}
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <span className="w-8 h-8 rounded-full bg-brand-blue text-white flex items-center justify-center font-black text-sm">
-                      3
+                      {isContactOnly ? '2' : '4'}
                     </span>
                     <h2 className="text-xl sm:text-2xl font-black text-navy-900">
-                      Seleccione la Hora
-                    </h2>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <span className="text-xs uppercase font-extrabold text-slate-500 tracking-wider block mb-2">
-                        Turno de la Mañana (8:30 AM - 12:00 PM)
-                      </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                        {calendarConfig.defaultAvailableSlots.morning.map((slot) => (
-                          <button
-                            key={slot.time}
-                            type="button"
-                            onClick={() => setSelectedTime(slot.time)}
-                            className={`p-3.5 rounded-2xl border-2 font-black text-sm sm:text-base transition-all ${
-                              selectedTime === slot.time
-                                ? 'bg-navy-900 text-amber-300 border-navy-900 shadow-md ring-2 ring-navy-800'
-                                : 'bg-white text-slate-800 border-slate-200 hover:border-brand-blue hover:bg-blue-50/50'
-                            }`}
-                          >
-                            <Clock className="w-4 h-4 inline mr-1.5 opacity-70" />
-                            <span>{slot.time}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-xs uppercase font-extrabold text-slate-500 tracking-wider block mb-2">
-                        Turno del Mediodía (12:30 PM - 3:00 PM)
-                      </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {calendarConfig.defaultAvailableSlots.midday.map((slot) => (
-                          <button
-                            key={slot.time}
-                            type="button"
-                            onClick={() => setSelectedTime(slot.time)}
-                            className={`p-3.5 rounded-2xl border-2 font-black text-sm sm:text-base transition-all ${
-                              selectedTime === slot.time
-                                ? 'bg-navy-900 text-amber-300 border-navy-900 shadow-md ring-2 ring-navy-800'
-                                : 'bg-white text-slate-800 border-slate-200 hover:border-brand-blue hover:bg-blue-50/50'
-                            }`}
-                          >
-                            <Clock className="w-4 h-4 inline mr-1.5 opacity-70" />
-                            <span>{slot.time}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-xs uppercase font-extrabold text-slate-500 tracking-wider block mb-2">
-                        Turno de la Tarde (3:30 PM - 5:00 PM)
-                      </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-2 gap-2.5">
-                        {calendarConfig.defaultAvailableSlots.afternoon.map((slot) => (
-                          <button
-                            key={slot.time}
-                            type="button"
-                            onClick={() => setSelectedTime(slot.time)}
-                            className={`p-3.5 rounded-2xl border-2 font-black text-sm sm:text-base transition-all ${
-                              selectedTime === slot.time
-                                ? 'bg-navy-900 text-amber-300 border-navy-900 shadow-md ring-2 ring-navy-800'
-                                : 'bg-white text-slate-800 border-slate-200 hover:border-brand-blue hover:bg-blue-50/50'
-                            }`}
-                          >
-                            <Clock className="w-4 h-4 inline mr-1.5 opacity-70" />
-                            <span>{slot.time}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 4: Patient Info */}
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="w-8 h-8 rounded-full bg-brand-blue text-white flex items-center justify-center font-black text-sm">
-                      4
-                    </span>
-                    <h2 className="text-xl sm:text-2xl font-black text-navy-900">
-                      Datos del Paciente
+                      {isContactOnly ? 'Sus Datos de Contacto' : 'Datos del Paciente'}
                     </h2>
                   </div>
 
@@ -774,7 +851,7 @@ export default function BookingPage({
                   {/* Patient Email */}
                   <div className="mt-4">
                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">
-                      Correo Electrónico (Donde recibirá la invitación de calendario):
+                      Correo Electrónico (Para recibir confirmación):
                     </label>
                     <div className="relative">
                       <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -788,7 +865,10 @@ export default function BookingPage({
                       />
                     </div>
                     <span className="block text-xs text-slate-500 mt-1">
-                      Le enviaremos la invitación de la cita a este correo tanto a usted como a la clínica.
+                      {isContactOnly
+                        ? 'Le enviaremos un correo de confirmación de su solicitud.'
+                        : 'Le enviaremos la invitación de la cita a este correo tanto a usted como a la clínica.'
+                      }
                     </span>
                   </div>
 
@@ -826,11 +906,11 @@ export default function BookingPage({
                   {/* Optional notes */}
                   <div className="mt-4">
                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-                      Notas adicionales (Opcional):
+                      {isContactOnly ? '¿En qué horario o tema prefiere que le contactemos? (Opcional):' : 'Notas adicionales (Opcional):'}
                     </label>
                     <input
                       type="text"
-                      placeholder="Alguna preferencia o detalle médico a tener en cuenta..."
+                      placeholder={isContactOnly ? "Ej. Prefiero llamada por la mañana, consulta de dentadura..." : "Alguna preferencia o detalle médico a tener en cuenta..."}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:border-brand-blue focus:bg-white"
@@ -843,13 +923,23 @@ export default function BookingPage({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-5 px-8 bg-brand-blue hover:bg-brand-hover text-white text-lg sm:text-xl font-black rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 disabled:opacity-50"
+                    className="w-full py-5 px-8 bg-brand-blue hover:bg-brand-hover text-white text-lg sm:text-xl font-black rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isSubmitting ? 'Procesando Cita...' : `Confirmar Cita para el ${selectedDate} a las ${selectedTime}`}
+                    {isContactOnly ? (
+                      <>
+                        <PhoneCall className="w-6 h-6 text-amber-300" />
+                        <span>{isSubmitting ? (lang === 'es' ? 'Enviando solicitud...' : 'Sending request...') : (t.booking.contactMeBtn || 'Contáctenme')}</span>
+                      </>
+                    ) : (
+                      <span>{isSubmitting ? 'Procesando Cita...' : `Confirmar Cita para el ${selectedDate} a las ${selectedTime}`}</span>
+                    )}
                   </button>
 
                   <p className="text-center text-xs sm:text-sm text-slate-500 mt-3">
-                    Conectado con el calendario oficial de <strong>SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>.
+                    {isContactOnly
+                      ? (lang === 'es' ? 'Al presionar "Contáctenme", nuestro equipo recibirá sus datos para comunicarse con usted a la brevedad.' : 'By clicking "Contact Me", our clinic team will receive your contact details to reach out shortly.')
+                      : <>Conectado con el calendario oficial de <strong>SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>.</>
+                    }
                   </p>
                 </div>
 
