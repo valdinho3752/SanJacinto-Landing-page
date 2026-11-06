@@ -164,3 +164,4 @@ export default function PrivacyPage({ onBackToHome, lang = 'es' }) {
     </div>
   );
 }
+

@@ -154,3 +154,4 @@ export default function TermsPage({ onBackToHome, lang = 'es' }) {
     </div>
   );
 }
+
