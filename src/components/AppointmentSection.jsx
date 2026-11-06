@@ -49,9 +49,9 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
   const [wheelchairHelp, setWheelchairHelp] = useState('no');
   const [notes, setNotes] = useState('');
 
-  // Estados de consentimiento (A2P 10DLC & TCPA) - marcados automáticamente por defecto
-  const [consentTransactional, setConsentTransactional] = useState(true);
-  const [consentMarketing, setConsentMarketing] = useState(true);
+  // Estados de consentimiento (A2P 10DLC & TCPA) - desmarcadas por defecto
+  const [consentTransactional, setConsentTransactional] = useState(false);
+  const [consentMarketing, setConsentMarketing] = useState(false);
   const [consentErrorTransactional, setConsentErrorTransactional] = useState(false);
   const [consentErrorMarketing, setConsentErrorMarketing] = useState(false);
 
@@ -190,8 +190,8 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
     setPatientPhone('');
     setPatientEmail('');
     setNotes('');
-    setConsentTransactional(true);
-    setConsentMarketing(true);
+    setConsentTransactional(false);
+    setConsentMarketing(false);
     setConsentErrorTransactional(false);
     setConsentErrorMarketing(false);
   };
