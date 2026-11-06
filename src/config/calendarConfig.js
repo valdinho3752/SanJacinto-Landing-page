@@ -9,6 +9,9 @@ export const calendarConfig = {
   // URL del Webhook de Google Apps Script generado por el usuario (100% automático en segundo plano):
   googleAppsScriptWebhookUrl: "https://script.google.com/macros/s/AKfycbwktihIZWVTgSzXeT4lwAX9LbFtuL6lCM7NBWk-ZjCqOal9B92lSXuLDbgLop9sAtgxBQ/exec",
 
+  // URL del Webhook de LeadConnector / CRM (GoHighLevel) para citas:
+  leadConnectorWebhookUrl: "https://services.leadconnectorhq.com/hooks/qBiHvVK28H4a4j8oWS6t/webhook-trigger/49ea9fc1-bb2e-421e-9e31-4a897629a188",
+
   // Enlace directo de suscripción / visualización de Google Calendar proporcionado por el usuario:
   googleCalendarPublicUrl: "https://calendar.google.com/calendar/u/0?cid=ZTFkMDhkYWFlOTJmYTI3OWY2MjQ3ZjkzN2ExZGFhOTYwMDI4ZTJiNTQwMzIwZmU1YTRkODYzNGMxMDdiZGI4M0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t",
 

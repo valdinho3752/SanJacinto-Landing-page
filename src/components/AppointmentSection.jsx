@@ -5,6 +5,7 @@ import {
   Check, Sparkles, MessageCircle, Send
 } from 'lucide-react';
 import { calendarConfig } from '../config/calendarConfig';
+import { sendLeadConnectorAppointment } from '../services/leadConnectorService';
 
 export default function AppointmentSection({ t, initialService = "" }) {
   const [selectedService, setSelectedService] = useState(
@@ -88,7 +89,28 @@ export default function AppointmentSection({ t, initialService = "" }) {
     const randomCode = 'SJ-' + Math.floor(1000 + Math.random() * 9000);
     setAppointmentCode(randomCode);
 
-    // Send payload to Google Apps Script Webhook
+    // Separar nombre y apellido para el CRM / Webhook
+    const nameParts = patientName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    const wheelchairAssistanceText = wheelchairHelp === 'yes'
+      ? 'Sí, agradeceré apoyo en la entrada'
+      : 'No, me desplazo con normalidad';
+
+    // 1. Enviar datos a LeadConnector / CRM Webhook
+    sendLeadConnectorAppointment({
+      firstName,
+      lastName,
+      phone: patientPhone.trim(),
+      email: patientEmail.trim(),
+      treatment: selectedService,
+      appointmentDate: date,
+      appointmentTime: timeSlot,
+      wheelchairAssistance: wheelchairAssistanceText,
+      notes: notes.trim()
+    });
+
+    // 2. Enviar payload a Google Apps Script Webhook (Google Calendar)
     if (calendarConfig.googleAppsScriptWebhookUrl) {
       try {
         await fetch(calendarConfig.googleAppsScriptWebhookUrl, {

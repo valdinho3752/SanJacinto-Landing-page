@@ -5,6 +5,7 @@ import {
   Check, Info, Sparkles, MessageCircle, Eye, CalendarCheck, Settings, Copy
 } from 'lucide-react';
 import { calendarConfig } from '../config/calendarConfig';
+import { sendLeadConnectorAppointment } from '../services/leadConnectorService';
 
 export default function BookingPage({ 
   onBackToHome, 
@@ -224,7 +225,28 @@ export default function BookingPage({
     const code = 'SJ-CAL-' + Math.floor(1000 + Math.random() * 9000);
     setAppointmentCode(code);
 
-    // If Google Apps Script Webhook is configured, send in background
+    // Separar nombre y apellido para el CRM / Webhook
+    const nameParts = patientName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    const wheelchairAssistanceText = wheelchairHelp === 'yes'
+      ? (lang === 'es' ? 'Sí, agradeceré apoyo en la entrada' : 'Yes, assistance required')
+      : (lang === 'es' ? 'No, me desplazo con normalidad' : 'No assistance required');
+
+    // 1. Enviar datos a LeadConnector / CRM Webhook
+    sendLeadConnectorAppointment({
+      firstName,
+      lastName,
+      phone: patientPhone.trim(),
+      email: patientEmail.trim(),
+      treatment: selectedService,
+      appointmentDate: selectedDate,
+      appointmentTime: selectedTime,
+      wheelchairAssistance: wheelchairAssistanceText,
+      notes: notes.trim()
+    });
+
+    // 2. If Google Apps Script Webhook is configured, send in background
     if (calendarConfig.googleAppsScriptWebhookUrl) {
       try {
         await fetch(calendarConfig.googleAppsScriptWebhookUrl, {
