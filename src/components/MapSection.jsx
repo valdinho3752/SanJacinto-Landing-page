@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapPin, Navigation, Phone, Clock, CheckCircle2, ExternalLink } from 'lucide-react';
 
-export default function MapSection({ t }) {
+export default function MapSection({ t, lang = 'es' }) {
   const googleMapsUrl = "https://maps.app.goo.gl/staj4b6FonERcXFR7";
   
   // Google Maps embed URL using San Jacinto Center for Implants and Dentures query
@@ -33,7 +33,7 @@ export default function MapSection({ t }) {
             <div className="bg-navy-900 text-white px-5 py-3 flex items-center justify-between text-sm">
               <div className="flex items-center gap-2 font-bold">
                 <Navigation className="w-4 h-4 text-sky-400" />
-                <span>Mapa Interactivo de Nuestra Ubicación</span>
+                <span>{lang === 'es' ? 'Mapa Interactivo de Nuestra Ubicación' : 'Interactive Map of Our Clinic Location'}</span>
               </div>
               <a
                 href={googleMapsUrl}
@@ -41,7 +41,7 @@ export default function MapSection({ t }) {
                 rel="noopener noreferrer"
                 className="text-xs text-amber-300 hover:text-white inline-flex items-center gap-1 font-bold"
               >
-                <span>Ver en pantalla completa</span>
+                <span>{lang === 'es' ? 'Ver en pantalla completa' : 'View full screen'}</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -58,7 +58,9 @@ export default function MapSection({ t }) {
 
             <div className="bg-white p-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <span className="text-xs text-slate-500 font-medium">
-                San Jacinto, California • Fácil acceso desde Ramona Blvd y San Jacinto Ave
+                {lang === 'es' 
+                  ? 'San Jacinto, California • Fácil acceso desde Ramona Blvd y San Jacinto Ave' 
+                  : 'San Jacinto, California • Easy access from Ramona Blvd and San Jacinto Ave'}
               </span>
               <a
                 href={googleMapsUrl}
@@ -86,7 +88,9 @@ export default function MapSection({ t }) {
                   SAN JACINTO CENTER FOR IMPLANTS AND DENTURES
                 </div>
                 <div className="text-slate-600 text-base mt-1">
-                  San Jacinto, CA (Haga clic en el botón inferior para abrir la ruta directa en Google Maps)
+                  {lang === 'es' 
+                    ? 'San Jacinto, CA (Haga clic en el botón inferior para abrir la ruta directa en Google Maps)' 
+                    : 'San Jacinto, CA (Click the button below to get direct directions in Google Maps)'}
                 </div>
               </div>
 
@@ -103,7 +107,7 @@ export default function MapSection({ t }) {
                   <span>+1 (442) 374-2450</span>
                 </a>
                 <p className="text-xs text-slate-500 mt-1">
-                  Llamada directa • Contestamos en español e inglés
+                  {lang === 'es' ? 'Llamada directa • Contestamos en español e inglés' : 'Direct line • We speak English and Spanish'}
                 </p>
               </div>
 
@@ -121,7 +125,7 @@ export default function MapSection({ t }) {
               {/* Accessibility Points for Seniors */}
               <div className="pt-4 border-t border-slate-200">
                 <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-3">
-                  Comodidad y Accesibilidad para Adultos Mayores:
+                  {lang === 'es' ? 'Comodidad y Accesibilidad para Adultos Mayores:' : 'Senior Comfort & Accessibility:'}
                 </h4>
                 <ul className="space-y-2.5">
                   {t.location.accessibilityHighlights.map((highlight, index) => (

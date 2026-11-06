@@ -763,39 +763,6 @@ export default function AppointmentSection({ t, lang = 'es', initialService = ""
                     </label>
                   </div>
 
-                  {/* Discreet Links to Terms and Privacy Policy */}
-                  <div className="flex items-center justify-center gap-3 text-xs text-slate-500 pt-1">
-                    <a
-                      href="/terminos&condiciones"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (onNavigate) {
-                          onNavigate('/terminos&condiciones');
-                        } else {
-                          window.location.href = '/terminos&condiciones';
-                        }
-                      }}
-                      className="underline hover:text-brand-blue transition-colors font-semibold"
-                    >
-                      {t.booking.termsLabel || 'Términos y Condiciones'}
-                    </a>
-                    <span>•</span>
-                    <a
-                      href="/politicas-de-privasidad"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (onNavigate) {
-                          onNavigate('/politicas-de-privasidad');
-                        } else {
-                          window.location.href = '/politicas-de-privasidad';
-                        }
-                      }}
-                      className="underline hover:text-brand-blue transition-colors font-semibold"
-                    >
-                      {t.booking.privacyLabel || 'Política de Privacidad'}
-                    </a>
-                  </div>
-
                 </div>
               </div>
 
@@ -827,6 +794,39 @@ export default function AppointmentSection({ t, lang = 'es', initialService = ""
                 <p className="text-center text-xs text-slate-500 mt-2.5">
                   {isContactOnly ? t.booking.submitNoteContact : t.booking.submitNoteBooking}
                 </p>
+
+                {/* Discreet Links to Privacy Policy & Terms and Conditions (Matching Compliance Screenshot) */}
+                <div className="flex items-center justify-center gap-3 text-xs text-slate-500 pt-3">
+                  <a
+                    href="/politicas-de-privasidad"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (onNavigate) {
+                        onNavigate('/politicas-de-privasidad');
+                      } else {
+                        window.location.href = '/politicas-de-privasidad';
+                      }
+                    }}
+                    className="underline hover:text-brand-blue transition-colors font-semibold"
+                  >
+                    {t.booking.privacyLabel || 'Política de Privacidad'}
+                  </a>
+                  <span>•</span>
+                  <a
+                    href="/terminos&condiciones"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (onNavigate) {
+                        onNavigate('/terminos&condiciones');
+                      } else {
+                        window.location.href = '/terminos&condiciones';
+                      }
+                    }}
+                    className="underline hover:text-brand-blue transition-colors font-semibold"
+                  >
+                    {t.booking.termsLabel || 'Términos y Condiciones'}
+                  </a>
+                </div>
               </div>
 
             </form>

@@ -209,6 +209,7 @@ export default function App() {
         {/* Map Location Section with Google Maps Widget */}
         <MapSection 
           t={t} 
+          lang={lang}
         />
       </main>
 
@@ -225,6 +226,7 @@ export default function App() {
         clearCart={clearCart}
         t={t}
         lang={lang}
+        onNavigate={navigateTo}
       />
 
       {/* Floating Quick Action Bar for Elderly Convenience on Mobile */}

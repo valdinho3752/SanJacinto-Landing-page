@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Trash2, Plus, Minus, ShoppingBag, CheckCircle, Phone, AlertCircle, ArrowRight, MessageCircle } from 'lucide-react';
 import { calendarConfig } from '../config/calendarConfig';
+import { sendLeadConnectorAppointment } from '../services/leadConnectorService';
 
 export default function CartModal({
   isOpen,
@@ -10,11 +11,20 @@ export default function CartModal({
   removeFromCart,
   clearCart,
   t,
-  lang = 'es'
+  lang = 'es',
+  onNavigate
 }) {
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
+  const [patientEmail, setPatientEmail] = useState('');
   const [patientNotes, setPatientNotes] = useState('');
+  
+  // Consent checkboxes (A2P 10DLC & TCPA) - Unchecked by default
+  const [consentTransactional, setConsentTransactional] = useState(false);
+  const [consentMarketing, setConsentMarketing] = useState(false);
+  const [consentErrorTransactional, setConsentErrorTransactional] = useState(false);
+  const [consentErrorMarketing, setConsentErrorMarketing] = useState(false);
+
   const [isOrdered, setIsOrdered] = useState(false);
   const [orderCode, setOrderCode] = useState('');
   const [formError, setFormError] = useState('');
@@ -39,10 +49,56 @@ export default function CartModal({
       return;
     }
 
+    // Validación de casillas obligatorias de consentimiento (A2P / TCPA)
+    let hasConsentError = false;
+    if (!consentTransactional) {
+      setConsentErrorTransactional(true);
+      hasConsentError = true;
+    } else {
+      setConsentErrorTransactional(false);
+    }
+
+    if (!consentMarketing) {
+      setConsentErrorMarketing(true);
+      hasConsentError = true;
+    } else {
+      setConsentErrorMarketing(false);
+    }
+
+    if (hasConsentError) {
+      setFormError(
+        lang === 'es'
+          ? 'Debe marcar las casillas de consentimiento para poder confirmar su pedido.'
+          : 'You must check the consent checkboxes to confirm your order.'
+      );
+      return;
+    }
+
     setFormError('');
     const code = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
     setOrderCode(code);
 
+    const nameParts = patientName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    const itemsSummary = cartItems.map(i => `${i.name} (${i.arch === 'both' ? 'Full Set' : i.arch}) x${i.quantity}`).join(', ');
+
+    // 1. Enviar datos a LeadConnector / CRM Webhook con consentimientos
+    sendLeadConnectorAppointment({
+      firstName,
+      lastName,
+      phone: patientPhone.trim(),
+      email: patientEmail.trim(),
+      treatment: `Pedido de Carrito: ${itemsSummary} ($${totalAmount} USD)`,
+      appointmentDate: lang === 'es' ? 'Pedido desde Carrito' : 'Cart Order Reservation',
+      appointmentTime: lang === 'es' ? 'Por coordinar' : 'To be coordinated',
+      wheelchairAssistance: 'N/A',
+      notes: patientNotes.trim(),
+      consentTransactional,
+      consentMarketing
+    });
+
+    // 2. Enviar a Google Apps Script Webhook si está configurado
     if (calendarConfig.googleAppsScriptWebhookUrl) {
       try {
         fetch(calendarConfig.googleAppsScriptWebhookUrl, {
@@ -53,6 +109,7 @@ export default function CartModal({
             type: 'cart_order',
             patientName: patientName.trim(),
             patientPhone: patientPhone.trim(),
+            patientEmail: patientEmail.trim(),
             notes: patientNotes.trim(),
             orderCode: code,
             items: cartItems.map(i => `${i.name} (${i.arch === 'both' ? 'Set Completo' : i.arch === 'upper' ? 'Superior' : 'Inferior'}) x${i.quantity} - $${i.price * i.quantity} USD`).join('\n'),
@@ -86,6 +143,7 @@ export default function CartModal({
         `• Código de Pedido: ${orderCode}\n` +
         `• Paciente: ${patientName}\n` +
         `• Teléfono: ${patientPhone}\n` +
+        (patientEmail ? `• Correo: ${patientEmail}\n` : '') +
         (patientNotes ? `• Notas: ${patientNotes}\n` : '')
       );
       return `https://wa.me/14423742450?text=${text}`;
@@ -98,6 +156,7 @@ export default function CartModal({
         `• Order Reference: ${orderCode}\n` +
         `• Patient: ${patientName}\n` +
         `• Phone: ${patientPhone}\n` +
+        (patientEmail ? `• Email: ${patientEmail}\n` : '') +
         (patientNotes ? `• Notes: ${patientNotes}\n` : '')
       );
       return `https://wa.me/14423742450?text=${text}`;
@@ -109,7 +168,12 @@ export default function CartModal({
     setIsOrdered(false);
     setPatientName('');
     setPatientPhone('');
+    setPatientEmail('');
     setPatientNotes('');
+    setConsentTransactional(false);
+    setConsentMarketing(false);
+    setConsentErrorTransactional(false);
+    setConsentErrorMarketing(false);
     onClose();
   };
 
@@ -177,6 +241,12 @@ export default function CartModal({
                   <span className="text-slate-500 font-semibold">{t.booking?.phoneSummary || 'Teléfono:'}</span>
                   <span className="font-bold text-navy-900">{patientPhone}</span>
                 </div>
+                {patientEmail && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-semibold">{t.booking?.emailSummary || 'Correo:'}</span>
+                    <span className="font-bold text-brand-blue">{patientEmail}</span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-2 border-t">
                   <span className="text-slate-500 font-semibold">{lang === 'es' ? 'Total Reservado:' : 'Total Reserved:'}</span>
                   <span className="font-black text-brand-blue text-base">${totalAmount} USD</span>
@@ -349,6 +419,19 @@ export default function CartModal({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                    {t.booking?.emailLabel || (lang === 'es' ? 'Correo Electrónico (Opcional):' : 'Email Address (Optional):')}
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="paciente@gmail.com"
+                    value={patientEmail}
+                    onChange={(e) => setPatientEmail(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:border-brand-blue focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
                     {t.cart.notes}
                   </label>
                   <input
@@ -358,6 +441,91 @@ export default function CartModal({
                     onChange={(e) => setPatientNotes(e.target.value)}
                     className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:border-brand-blue focus:bg-white"
                   />
+                </div>
+
+                {/* Consent Checkboxes (A2P 10DLC & TCPA Compliance) */}
+                <div className="pt-2 space-y-3">
+                  {/* Checkbox 1: Transactional */}
+                  <div
+                    className={`p-3 rounded-2xl border-2 transition-all ${
+                      consentErrorTransactional
+                        ? 'border-rose-500 bg-rose-50/90 ring-2 ring-rose-200'
+                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs leading-relaxed text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={consentTransactional}
+                        onChange={(e) => {
+                          setConsentTransactional(e.target.checked);
+                          if (e.target.checked) {
+                            setConsentErrorTransactional(false);
+                            if (consentMarketing) setFormError('');
+                          }
+                        }}
+                        className={`w-4 h-4 mt-0.5 rounded shrink-0 cursor-pointer ${
+                          consentErrorTransactional
+                            ? 'text-rose-600 border-rose-500 focus:ring-rose-500'
+                            : 'text-brand-blue border-slate-300 focus:ring-brand-blue'
+                        }`}
+                      />
+                      <div>
+                        <span>{t.booking?.smsConsentTransactional}</span>
+                        {consentErrorTransactional && (
+                          <p className="text-xs font-bold text-rose-600 mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>
+                              {lang === 'es'
+                                ? 'Debe marcar esta casilla para poder confirmar su pedido.'
+                                : 'You must check this box to confirm your order.'}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Checkbox 2: Marketing / Promotional */}
+                  <div
+                    className={`p-3 rounded-2xl border-2 transition-all ${
+                      consentErrorMarketing
+                        ? 'border-rose-500 bg-rose-50/90 ring-2 ring-rose-200'
+                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs leading-relaxed text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={consentMarketing}
+                        onChange={(e) => {
+                          setConsentMarketing(e.target.checked);
+                          if (e.target.checked) {
+                            setConsentErrorMarketing(false);
+                            if (consentTransactional) setFormError('');
+                          }
+                        }}
+                        className={`w-4 h-4 mt-0.5 rounded shrink-0 cursor-pointer ${
+                          consentErrorMarketing
+                            ? 'text-rose-600 border-rose-500 focus:ring-rose-500'
+                            : 'text-brand-blue border-slate-300 focus:ring-brand-blue'
+                        }`}
+                      />
+                      <div>
+                        <span>{t.booking?.smsConsentMarketing}</span>
+                        {consentErrorMarketing && (
+                          <p className="text-xs font-bold text-rose-600 mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>
+                              {lang === 'es'
+                                ? 'Debe marcar esta casilla para poder confirmar su pedido.'
+                                : 'You must check this box to confirm your order.'}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="pt-2">
@@ -371,6 +539,42 @@ export default function CartModal({
                   <p className="text-center text-xs text-slate-500 mt-2.5">
                     {t.cart.checkoutNote}
                   </p>
+
+                  {/* Discreet Links to Privacy Policy & Terms and Conditions */}
+                  <div className="flex items-center justify-center gap-3 text-xs text-slate-500 pt-3">
+                    <a
+                      href="/politicas-de-privasidad"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onClose();
+                        if (onNavigate) {
+                          onNavigate('/politicas-de-privasidad');
+                        } else {
+                          window.location.href = '/politicas-de-privasidad';
+                        }
+                      }}
+                      className="underline hover:text-brand-blue transition-colors font-semibold"
+                    >
+                      {t.booking?.privacyLabel || (lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy')}
+                    </a>
+                    <span>•</span>
+                    <a
+                      href="/terminos&condiciones"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onClose();
+                        if (onNavigate) {
+                          onNavigate('/terminos&condiciones');
+                        } else {
+                          window.location.href = '/terminos&condiciones';
+                        }
+                      }}
+                      className="underline hover:text-brand-blue transition-colors font-semibold"
+                    >
+                      {t.booking?.termsLabel || (lang === 'es' ? 'Términos y Condiciones' : 'Terms and Conditions')}
+                    </a>
+                  </div>
+
                 </div>
               </form>
 
