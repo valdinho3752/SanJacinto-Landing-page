@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* Accessible focus styling for seniors */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid #1b64da;
+  outline-offset: 2px;
+}
+
+/* Large text toggle class */
+body.large-text {
+  font-size: 1.25rem;
+}
+
+body.large-text h1 {
+  font-size: 3rem !important;
+}
+
+body.large-text h2 {
+  font-size: 2.5rem !important;
+}
+
+body.large-text p, body.large-text span, body.large-text button {
+  font-size: 1.2rem !important;
+}
