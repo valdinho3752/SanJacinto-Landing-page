@@ -38,9 +38,9 @@ export default function WorkShowcase({ t, onBookClick }) {
                 <div className="absolute bottom-4 left-4 right-4 bg-navy-900/90 backdrop-blur-md text-white p-3.5 rounded-xl border border-navy-700 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
-                    <span className="text-xs sm:text-sm font-bold">Muestra real elaborada en nuestro laboratorio</span>
+                    <span className="text-xs sm:text-sm font-bold">{t.showcase.photoBadge || 'Muestra real elaborada en nuestro laboratorio'}</span>
                   </div>
-                  <span className="text-xs text-sky-300 font-semibold hidden sm:inline">100% Acrílico Grado Médico</span>
+                  <span className="text-xs text-sky-300 font-semibold hidden sm:inline">{t.showcase.photoSub || '100% Acrílico Grado Médico'}</span>
                 </div>
               </div>
             </div>
@@ -90,7 +90,7 @@ export default function WorkShowcase({ t, onBookClick }) {
                   className="w-full inline-flex items-center justify-center gap-2 bg-navy-900 hover:bg-brand-blue text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md text-base"
                 >
                   <Heart className="w-5 h-5 text-rose-400" />
-                  <span>Quiero una Sonrisa Como Esta</span>
+                  <span>{t.showcase.photoCta || 'Quiero una Sonrisa Como Esta'}</span>
                 </button>
               </div>
 

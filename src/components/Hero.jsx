@@ -53,7 +53,7 @@ export default function Hero({ t, onBookClick }) {
             </div>
             <div>
               <h3 className="font-bold text-navy-900 text-lg">{t.hero.feature1}</h3>
-              <p className="text-slate-600 text-sm mt-1">Precios públicos fijos: Full Set a $1,518. Sin cobros sorpresa.</p>
+              <p className="text-slate-600 text-sm mt-1">{t.hero.feature1Desc}</p>
             </div>
           </div>
 
@@ -63,7 +63,7 @@ export default function Hero({ t, onBookClick }) {
             </div>
             <div>
               <h3 className="font-bold text-navy-900 text-lg">{t.hero.feature2}</h3>
-              <p className="text-slate-600 text-sm mt-1">Acrílico biocompatible pulido con bordes anatómicos suaves.</p>
+              <p className="text-slate-600 text-sm mt-1">{t.hero.feature2Desc}</p>
             </div>
           </div>
 
@@ -73,7 +73,7 @@ export default function Hero({ t, onBookClick }) {
             </div>
             <div>
               <h3 className="font-bold text-navy-900 text-lg">{t.hero.feature3}</h3>
-              <p className="text-slate-600 text-sm mt-1">Acceso plano sin gradas, ideal para andaderas y sillas de ruedas.</p>
+              <p className="text-slate-600 text-sm mt-1">{t.hero.feature3Desc}</p>
             </div>
           </div>
         </div>

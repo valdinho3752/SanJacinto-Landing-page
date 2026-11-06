@@ -10,7 +10,7 @@ export default function CartModal({
   removeFromCart,
   clearCart,
   t,
-  lang
+  lang = 'es'
 }) {
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
@@ -31,11 +31,11 @@ export default function CartModal({
     if (cartItems.length === 0) return;
 
     if (!patientName.trim()) {
-      setFormError('Por favor ingrese el nombre del paciente.');
+      setFormError(t.booking?.validationName || (lang === 'es' ? 'Por favor ingrese el nombre del paciente.' : 'Please enter the patient\'s name.'));
       return;
     }
     if (!patientPhone.trim() || patientPhone.trim().length < 7) {
-      setFormError('Por favor ingrese un número de teléfono de contacto.');
+      setFormError(t.booking?.validationPhone || (lang === 'es' ? 'Por favor ingrese un número de teléfono de contacto.' : 'Please enter a contact phone number.'));
       return;
     }
 
@@ -68,21 +68,40 @@ export default function CartModal({
   };
 
   const generateWhatsAppUrl = () => {
-    const itemsText = cartItems.map(item => 
-      `• ${item.name} (${item.arch === 'both' ? 'Set Completo' : item.arch === 'upper' ? 'Superior' : 'Inferior'}) x${item.quantity} = $${item.price * item.quantity} USD`
-    ).join('\n');
+    const itemsText = cartItems.map(item => {
+      const archStr = item.arch === 'both' 
+        ? (lang === 'es' ? 'Set Completo' : 'Full Set') 
+        : item.arch === 'upper' 
+          ? (lang === 'es' ? 'Superior' : 'Upper') 
+          : (lang === 'es' ? 'Inferior' : 'Lower');
+      return `• ${item.name} (${archStr}) x${item.quantity} = $${item.price * item.quantity} USD`;
+    }).join('\n');
     
-    const text = encodeURIComponent(
-      `Hola San Jacinto Center for Implants and Dentures,\n` +
-      `Deseo solicitar un presupuesto / cita para los siguientes tratamientos de mi carrito:\n\n` +
-      `${itemsText}\n\n` +
-      `• Total Estimado: $${totalAmount} USD\n` +
-      `• Código de Pedido: ${orderCode}\n` +
-      `• Paciente: ${patientName}\n` +
-      `• Teléfono: ${patientPhone}\n` +
-      (patientNotes ? `• Notas: ${patientNotes}\n` : '')
-    );
-    return `https://wa.me/14423742450?text=${text}`;
+    if (lang === 'es') {
+      const text = encodeURIComponent(
+        `Hola San Jacinto Center for Implants and Dentures,\n` +
+        `Deseo solicitar un presupuesto / cita para los siguientes tratamientos de mi carrito:\n\n` +
+        `${itemsText}\n\n` +
+        `• Total Estimado: $${totalAmount} USD\n` +
+        `• Código de Pedido: ${orderCode}\n` +
+        `• Paciente: ${patientName}\n` +
+        `• Teléfono: ${patientPhone}\n` +
+        (patientNotes ? `• Notas: ${patientNotes}\n` : '')
+      );
+      return `https://wa.me/14423742450?text=${text}`;
+    } else {
+      const text = encodeURIComponent(
+        `Hello San Jacinto Center for Implants and Dentures,\n` +
+        `I would like to request an estimate / consultation for the following treatments in my cart:\n\n` +
+        `${itemsText}\n\n` +
+        `• Estimated Total: $${totalAmount} USD\n` +
+        `• Order Reference: ${orderCode}\n` +
+        `• Patient: ${patientName}\n` +
+        `• Phone: ${patientPhone}\n` +
+        (patientNotes ? `• Notes: ${patientNotes}\n` : '')
+      );
+      return `https://wa.me/14423742450?text=${text}`;
+    }
   };
 
   const handleFinish = () => {
@@ -151,15 +170,15 @@ export default function CartModal({
 
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left text-sm space-y-2 mb-6">
                 <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Paciente:</span>
+                  <span className="text-slate-500 font-semibold">{t.booking?.patientSummary || 'Paciente:'}</span>
                   <span className="font-bold text-navy-900">{patientName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Teléfono:</span>
+                  <span className="text-slate-500 font-semibold">{t.booking?.phoneSummary || 'Teléfono:'}</span>
                   <span className="font-bold text-navy-900">{patientPhone}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t">
-                  <span className="text-slate-500 font-semibold">Total Reservado:</span>
+                  <span className="text-slate-500 font-semibold">{lang === 'es' ? 'Total Reservado:' : 'Total Reserved:'}</span>
                   <span className="font-black text-brand-blue text-base">${totalAmount} USD</span>
                 </div>
               </div>
@@ -172,7 +191,7 @@ export default function CartModal({
                   className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base py-3.5 px-6 rounded-xl shadow transition-all"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  <span>Enviar Pedido por WhatsApp a la Clínica</span>
+                  <span>{t.cart.sendWhatsAppCart || 'Enviar Pedido por WhatsApp a la Clínica'}</span>
                 </a>
 
                 <button
@@ -199,7 +218,7 @@ export default function CartModal({
                 onClick={onClose}
                 className="bg-navy-900 hover:bg-brand-blue text-white font-bold py-3 px-6 rounded-xl transition-all"
               >
-                Ver Tratamientos y Precios
+                {t.cart.viewTreatments || 'Ver Tratamientos y Precios'}
               </button>
             </div>
           ) : (
@@ -215,14 +234,18 @@ export default function CartModal({
                   >
                     <div>
                       <h4 className="font-extrabold text-navy-900 text-base sm:text-lg">
-                        {item.name}
+                        {lang === 'es' ? (item.spanishName || item.name) : item.name}
                       </h4>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs font-bold text-brand-blue bg-blue-100/70 px-2.5 py-0.5 rounded-md">
-                          {item.arch === 'both' ? 'Set Completo (Ambas)' : item.arch === 'upper' ? 'Superior (Arriba)' : 'Inferior (Abajo)'}
+                          {item.arch === 'both' 
+                            ? (lang === 'es' ? 'Set Completo (Ambas)' : 'Full Set (Both)') 
+                            : item.arch === 'upper' 
+                              ? (lang === 'es' ? 'Superior (Arriba)' : 'Upper Arch') 
+                              : (lang === 'es' ? 'Inferior (Abajo)' : 'Lower Arch')}
                         </span>
                         <span className="text-sm font-bold text-slate-600">
-                          ${item.price} c/u
+                          ${item.price} {lang === 'es' ? 'c/u' : 'ea'}
                         </span>
                       </div>
                     </div>
@@ -275,7 +298,7 @@ export default function CartModal({
                     {t.cart.total}
                   </span>
                   <span className="text-xs text-slate-600 font-medium">
-                    (Sin cargos ocultos ni anticipos en línea)
+                    {t.cart.noHiddenFees || '(Sin cargos ocultos ni anticipos en línea)'}
                   </span>
                 </div>
                 <span className="text-3xl font-black text-navy-900">

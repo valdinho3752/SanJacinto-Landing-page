@@ -141,11 +141,11 @@ export default function App() {
   };
 
   if (currentRoute === 'terms') {
-    return <TermsPage onBackToHome={() => navigateTo('/')} lang={lang} />;
+    return <TermsPage onBackToHome={() => navigateTo('/')} lang={lang} setLang={setLang} />;
   }
 
   if (currentRoute === 'privacy') {
-    return <PrivacyPage onBackToHome={() => navigateTo('/')} lang={lang} />;
+    return <PrivacyPage onBackToHome={() => navigateTo('/')} lang={lang} setLang={setLang} />;
   }
 
   return (
@@ -195,6 +195,7 @@ export default function App() {
         {/* Online Appointment Booking Section directly on the main landing page */}
         <AppointmentSection 
           t={t} 
+          lang={lang}
           initialService={bookingService} 
           onNavigate={navigateTo}
         />
@@ -212,7 +213,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <Footer t={t} onNavigate={navigateTo} />
+      <Footer t={t} lang={lang} onNavigate={navigateTo} />
 
       {/* Shopping Cart Modal */}
       <CartModal
@@ -233,7 +234,7 @@ export default function App() {
           className="flex-1 inline-flex items-center justify-center gap-2 bg-brand-blue text-white py-3 px-3 rounded-2xl shadow-2xl font-black text-xs border-2 border-blue-400/40"
         >
           <Phone className="w-4 h-4 text-amber-300 animate-pulse" />
-          <span>Llamar</span>
+          <span>{lang === 'es' ? 'Llamar' : 'Call'}</span>
         </a>
 
         <button
@@ -241,7 +242,7 @@ export default function App() {
           className="flex-1 inline-flex items-center justify-center gap-1.5 bg-navy-900 text-amber-300 py-3 px-3 rounded-2xl shadow-2xl font-black text-xs border-2 border-slate-700"
         >
           <Calendar className="w-4 h-4 text-sky-400" />
-          <span>Pedir Cita</span>
+          <span>{lang === 'es' ? 'Pedir Cita' : 'Book Visit'}</span>
         </button>
 
         {totalCartCount > 0 && (

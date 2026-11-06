@@ -7,7 +7,7 @@ import {
 import { calendarConfig } from '../config/calendarConfig';
 import { sendLeadConnectorAppointment } from '../services/leadConnectorService';
 
-export default function AppointmentSection({ t, initialService = "", onNavigate }) {
+export default function AppointmentSection({ t, lang = 'es', initialService = "", onNavigate }) {
   const [selectedService, setSelectedService] = useState(
     initialService || t.booking.serviceOptions[0]
   );
@@ -24,6 +24,13 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
       setSelectedService(initialService);
     }
   }, [initialService]);
+
+  // When language changes, update default selectedService if still matching option 0
+  useEffect(() => {
+    if (!initialService) {
+      setSelectedService(t.booking.serviceOptions[0]);
+    }
+  }, [lang]);
 
   // Format local Date to YYYY-MM-DD avoiding UTC timezone shift
   const formatLocalDate = (d) => {
@@ -43,13 +50,16 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
 
   const [date, setDate] = useState(getTomorrowDate());
   const [timeSlot, setTimeSlot] = useState('09:30 AM');
-  const [patientName, setPatientName] = useState('');
+  
+  // Separate First Name and Last Name to match A2P 10DLC specifications exactly
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
   const [patientEmail, setPatientEmail] = useState('');
   const [wheelchairHelp, setWheelchairHelp] = useState('no');
   const [notes, setNotes] = useState('');
 
-  // Estados de consentimiento (A2P 10DLC & TCPA) - desmarcadas por defecto
+  // Consent checkboxes (A2P 10DLC & TCPA) - Unchecked by default
   const [consentTransactional, setConsentTransactional] = useState(false);
   const [consentMarketing, setConsentMarketing] = useState(false);
   const [consentErrorTransactional, setConsentErrorTransactional] = useState(false);
@@ -60,19 +70,20 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
   const [appointmentCode, setAppointmentCode] = useState('');
   const [formError, setFormError] = useState('');
 
-  // 7 upcoming days for quick tap
+  // 6 upcoming days for quick tap
   const getUpcomingDays = () => {
     const days = [];
     const today = new Date();
+    const localeStr = lang === 'es' ? 'es-ES' : 'en-US';
     for (let i = 1; i <= 10; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       if (d.getDay() !== 0) { // skip Sundays
         days.push({
           dateStr: formatLocalDate(d),
-          dayName: d.toLocaleDateString('es-ES', { weekday: 'short' }),
+          dayName: d.toLocaleDateString(localeStr, { weekday: 'short' }),
           dayNum: d.getDate(),
-          monthName: d.toLocaleDateString('es-ES', { month: 'short' }),
+          monthName: d.toLocaleDateString(localeStr, { month: 'short' }),
         });
       }
     }
@@ -83,20 +94,24 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!patientName.trim()) {
-      setFormError('Por favor ingrese el nombre del paciente.');
+    if (!firstName.trim()) {
+      setFormError(t.booking.validationFirstName || (lang === 'es' ? 'Por favor ingrese su nombre.' : 'Please enter your first name.'));
+      return;
+    }
+    if (!lastName.trim()) {
+      setFormError(t.booking.validationLastName || (lang === 'es' ? 'Por favor ingrese su apellido.' : 'Please enter your last name.'));
       return;
     }
     if (!patientPhone.trim() || patientPhone.trim().length < 7) {
-      setFormError('Por favor ingrese un número de teléfono de contacto.');
+      setFormError(t.booking.validationPhone || (lang === 'es' ? 'Por favor ingrese un número de teléfono de contacto.' : 'Please enter a valid contact phone number.'));
       return;
     }
     if (!patientEmail.trim() || !patientEmail.includes('@')) {
-      setFormError('Por favor ingrese su correo electrónico para enviarle la confirmación.');
+      setFormError(t.booking.validationEmail || (lang === 'es' ? 'Por favor ingrese su correo electrónico para enviarle la confirmación.' : 'Please enter your email to receive confirmation.'));
       return;
     }
 
-    // Validación de casillas de consentimiento obligatorio
+    // Validation of consent checkboxes
     let hasConsentError = false;
     if (!consentTransactional) {
       setConsentErrorTransactional(true);
@@ -115,8 +130,8 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
     if (hasConsentError) {
       setFormError(
         isContactOnly
-          ? 'Debe marcar las casillas de consentimiento para poder solicitar que le contactemos.'
-          : 'Debe marcar las casillas de consentimiento para poder agendar su cita.'
+          ? (t.booking.validationConsentContact || (lang === 'es' ? 'Debe marcar las casillas de consentimiento para poder solicitar que le contactemos.' : 'You must check the consent checkboxes to request contact.'))
+          : (t.booking.validationConsentBooking || (lang === 'es' ? 'Debe marcar las casillas de consentimiento para poder agendar su cita.' : 'You must check the consent checkboxes to schedule your appointment.'))
       );
       return;
     }
@@ -127,23 +142,20 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
     const randomCode = prefix + Math.floor(1000 + Math.random() * 9000);
     setAppointmentCode(randomCode);
 
-    // Separar nombre y apellido para el CRM / Webhook
-    const nameParts = patientName.trim().split(/\s+/);
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
     const wheelchairAssistanceText = wheelchairHelp === 'yes'
-      ? 'Sí, agradeceré apoyo en la entrada'
-      : 'No, me desplazo con normalidad';
+      ? (lang === 'es' ? 'Sí, agradeceré apoyo en la entrada' : 'Yes, assistance requested at arrival')
+      : (lang === 'es' ? 'No, me desplazo con normalidad' : 'No, walks independently');
 
     // 1. Enviar datos a LeadConnector / CRM Webhook (Siempre se envía a GHL)
     sendLeadConnectorAppointment({
-      firstName,
-      lastName,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       phone: patientPhone.trim(),
       email: patientEmail.trim(),
       treatment: selectedService,
-      appointmentDate: isContactOnly ? "Por coordinar / Contactar" : date,
-      appointmentTime: isContactOnly ? "Por coordinar / Contactar" : timeSlot,
+      appointmentDate: isContactOnly ? (lang === 'es' ? "Por coordinar / Contactar" : "Pending Coordination") : date,
+      appointmentTime: isContactOnly ? (lang === 'es' ? "Por coordinar / Contactar" : "Pending Coordination") : timeSlot,
       wheelchairAssistance: wheelchairAssistanceText,
       notes: notes.trim(),
       consentTransactional,
@@ -159,7 +171,9 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
           mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
-            patientName: patientName.trim(),
+            patientName: fullName,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
             patientPhone: patientPhone.trim(),
             patientEmail: patientEmail.trim(),
             email: patientEmail.trim(),
@@ -186,7 +200,8 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
 
   const handleReset = () => {
     setIsSubmitted(false);
-    setPatientName('');
+    setFirstName('');
+    setLastName('');
     setPatientPhone('');
     setPatientEmail('');
     setNotes('');
@@ -196,35 +211,69 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
     setConsentErrorMarketing(false);
   };
 
+  const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+
   const generateWhatsAppUrl = () => {
-    if (isContactOnly) {
+    if (lang === 'es') {
+      if (isContactOnly) {
+        const text = encodeURIComponent(
+          `Hola San Jacinto Center for Implants and Dentures,\n` +
+          `He solicitado que se pongan en contacto conmigo desde su página web:\n` +
+          `• Paciente: ${fullName}\n` +
+          `• Teléfono: ${patientPhone}\n` +
+          `• Correo: ${patientEmail}\n` +
+          `• Motivo: ${selectedService}\n` +
+          `• Código de Solicitud: ${appointmentCode}\n` +
+          (wheelchairHelp === 'yes' ? `• Requiere asistencia de movilidad: Sí\n` : '') +
+          (notes ? `• Notas: ${notes}\n` : '')
+        );
+        return `https://wa.me/14423742450?text=${text}`;
+      }
+
       const text = encodeURIComponent(
         `Hola San Jacinto Center for Implants and Dentures,\n` +
-        `He solicitado que se pongan en contacto conmigo desde su página web:\n` +
-        `• Paciente: ${patientName}\n` +
+        `He agendado una cita desde su página web:\n` +
+        `• Paciente: ${fullName}\n` +
         `• Teléfono: ${patientPhone}\n` +
         `• Correo: ${patientEmail}\n` +
-        `• Motivo: ${selectedService}\n` +
-        `• Código de Solicitud: ${appointmentCode}\n` +
+        `• Tratamiento: ${selectedService}\n` +
+        `• Fecha: ${date} a las ${timeSlot}\n` +
+        `• Código de Cita: ${appointmentCode}\n` +
         (wheelchairHelp === 'yes' ? `• Requiere asistencia de movilidad: Sí\n` : '') +
         (notes ? `• Notas: ${notes}\n` : '')
       );
       return `https://wa.me/14423742450?text=${text}`;
-    }
+    } else {
+      // English WhatsApp text
+      if (isContactOnly) {
+        const text = encodeURIComponent(
+          `Hello San Jacinto Center for Implants and Dentures,\n` +
+          `I submitted a contact request from your website:\n` +
+          `• Patient: ${fullName}\n` +
+          `• Phone: ${patientPhone}\n` +
+          `• Email: ${patientEmail}\n` +
+          `• Inquiring About: ${selectedService}\n` +
+          `• Request ID: ${appointmentCode}\n` +
+          (wheelchairHelp === 'yes' ? `• Mobility assistance requested: Yes\n` : '') +
+          (notes ? `• Notes: ${notes}\n` : '')
+        );
+        return `https://wa.me/14423742450?text=${text}`;
+      }
 
-    const text = encodeURIComponent(
-      `Hola San Jacinto Center for Implants and Dentures,\n` +
-      `He agendado una cita desde su página web:\n` +
-      `• Paciente: ${patientName}\n` +
-      `• Teléfono: ${patientPhone}\n` +
-      `• Correo: ${patientEmail}\n` +
-      `• Tratamiento: ${selectedService}\n` +
-      `• Fecha: ${date} a las ${timeSlot}\n` +
-      `• Código de Cita: ${appointmentCode}\n` +
-      (wheelchairHelp === 'yes' ? `• Requiere asistencia de movilidad: Sí\n` : '') +
-      (notes ? `• Notas: ${notes}\n` : '')
-    );
-    return `https://wa.me/14423742450?text=${text}`;
+      const text = encodeURIComponent(
+        `Hello San Jacinto Center for Implants and Dentures,\n` +
+        `I booked an appointment on your website:\n` +
+        `• Patient: ${fullName}\n` +
+        `• Phone: ${patientPhone}\n` +
+        `• Email: ${patientEmail}\n` +
+        `• Treatment: ${selectedService}\n` +
+        `• Date: ${date} at ${timeSlot}\n` +
+        `• Appointment ID: ${appointmentCode}\n` +
+        (wheelchairHelp === 'yes' ? `• Mobility assistance requested: Yes\n` : '') +
+        (notes ? `• Notes: ${notes}\n` : '')
+      );
+      return `https://wa.me/14423742450?text=${text}`;
+    }
   };
 
   return (
@@ -235,13 +284,13 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 bg-blue-50 text-brand-blue font-bold px-4 py-1.5 rounded-full text-sm mb-3 border border-blue-200">
             <CalendarIcon className="w-4 h-4" />
-            <span>Citas en Línea</span>
+            <span>{t.booking.badge}</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-navy-900 tracking-tight">
-            Reserve su Cita Médica
+            {t.booking.title}
           </h2>
           <p className="mt-3 text-base sm:text-lg text-slate-600">
-            Seleccione el día y la hora. Le enviaremos la confirmación e invitación directamente a su correo electrónico.
+            {t.booking.subtitle}
           </p>
         </div>
 
@@ -256,21 +305,32 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
               </div>
 
               <div className="inline-block bg-navy-900 text-amber-300 font-black px-4 py-1.5 rounded-full text-sm mb-3">
-                {isContactOnly ? `Código de Solicitud: ${appointmentCode}` : `Código de Cita: ${appointmentCode}`}
+                {isContactOnly
+                  ? `${t.booking.requestId || 'Código de Solicitud:'} ${appointmentCode}`
+                  : `${t.booking.appointmentId || 'Código de Cita:'} ${appointmentCode}`
+                }
               </div>
 
               <h3 className="text-2xl sm:text-3xl font-black text-navy-900 mb-2">
-                {isContactOnly ? '¡Solicitud Recibida con Éxito!' : '¡Cita Agendada con Éxito!'}
+                {isContactOnly ? t.booking.confirmedTitleContact : t.booking.confirmedTitleBooking}
               </h3>
 
               <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed">
                 {isContactOnly ? (
                   <>
-                    Hemos recibido sus datos en <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Un especialista de nuestro equipo se comunicará con usted a la brevedad al teléfono <strong className="text-navy-900">{patientPhone}</strong> o correo <strong className="text-brand-blue">{patientEmail}</strong>.
+                    {lang === 'es' ? (
+                      <>Hemos recibido sus datos en <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Un especialista de nuestro equipo se comunicará con usted a la brevedad al teléfono <strong className="text-navy-900">{patientPhone}</strong> o correo <strong className="text-brand-blue">{patientEmail}</strong>.</>
+                    ) : (
+                      <>We have received your request at <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. A specialist from our team will reach out promptly at <strong className="text-navy-900">{patientPhone}</strong> or email <strong className="text-brand-blue">{patientEmail}</strong>.</>
+                    )}
                   </>
                 ) : (
                   <>
-                    Su cita ha quedado registrada en la agenda de <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Hemos enviado la confirmación e invitación a: <strong className="text-brand-blue">{patientEmail}</strong> y al equipo de la clínica.
+                    {lang === 'es' ? (
+                      <>Su cita ha quedado registrada en la agenda de <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. Hemos enviado la confirmación e invitación a: <strong className="text-brand-blue">{patientEmail}</strong> y al equipo de la clínica.</>
+                    ) : (
+                      <>Your appointment is confirmed at <strong className="text-navy-900">SAN JACINTO CENTER FOR IMPLANTS AND DENTURES</strong>. We sent an invitation to <strong className="text-brand-blue">{patientEmail}</strong> and our clinical care team.</>
+                    )}
                   </>
                 )}
               </p>
@@ -278,42 +338,48 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
               {/* Appointment summary recap */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200 text-left text-sm space-y-2.5 mb-8 shadow-sm">
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500 font-semibold">Paciente:</span>
-                  <span className="font-bold text-navy-900">{patientName}</span>
+                  <span className="text-slate-500 font-semibold">{t.booking.patientSummary || 'Paciente:'}</span>
+                  <span className="font-bold text-navy-900">{fullName}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500 font-semibold">Teléfono:</span>
+                  <span className="text-slate-500 font-semibold">{t.booking.phoneSummary || 'Teléfono:'}</span>
                   <span className="font-bold text-navy-900">{patientPhone}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500 font-semibold">Correo Electrónico:</span>
+                  <span className="text-slate-500 font-semibold">{t.booking.emailSummary || 'Correo:'}</span>
                   <span className="font-bold text-brand-blue">{patientEmail}</span>
                 </div>
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-slate-500 font-semibold">Tratamiento / Motivo:</span>
+                  <span className="text-slate-500 font-semibold">{t.booking.serviceSummary || 'Tratamiento:'}</span>
                   <span className="font-bold text-navy-900 text-right">{selectedService}</span>
                 </div>
                 {!isContactOnly ? (
                   <>
                     <div className="flex justify-between border-b pb-2">
-                      <span className="text-slate-500 font-semibold">Fecha:</span>
+                      <span className="text-slate-500 font-semibold">{t.booking.dateSummary || 'Fecha:'}</span>
                       <span className="font-bold text-navy-900">{date}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500 font-semibold">Hora:</span>
+                      <span className="text-slate-500 font-semibold">{t.booking.timeSummary || 'Hora:'}</span>
                       <span className="font-black text-emerald-700 text-base">{timeSlot}</span>
                     </div>
                   </>
                 ) : (
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Modalidad:</span>
-                    <span className="font-black text-emerald-700 text-base">Contacto Telefónico / WhatsApp</span>
+                    <span className="text-slate-500 font-semibold">{lang === 'es' ? 'Modalidad:' : 'Format:'}</span>
+                    <span className="font-black text-emerald-700 text-base">
+                      {lang === 'es' ? 'Contacto Telefónico / WhatsApp' : 'Direct Phone / WhatsApp Contact'}
+                    </span>
                   </div>
                 )}
                 {wheelchairHelp === 'yes' && (
                   <div className="pt-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg flex items-center gap-1.5 border border-amber-200">
                     <HeartHandshake className="w-4 h-4 shrink-0" />
-                    <span>Se ha notificado solicitud de asistencia de movilidad a la entrada.</span>
+                    <span>
+                      {lang === 'es'
+                        ? 'Se ha notificado solicitud de asistencia de movilidad a la entrada.'
+                        : 'Mobility and wheelchair assistance upon arrival has been requested.'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -328,10 +394,7 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                 >
                   <MessageCircle className="w-5 h-5" />
                   <span>
-                    {isContactOnly
-                      ? 'Contactar Directamente por WhatsApp a la Clínica'
-                      : 'Enviar Confirmación por WhatsApp a la Clínica'
-                    }
+                    {isContactOnly ? t.booking.sendWhatsAppContact : t.booking.sendWhatsAppBooking}
                   </span>
                 </a>
 
@@ -340,7 +403,7 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                     onClick={handleReset}
                     className="flex-1 bg-navy-900 hover:bg-navy-800 text-white font-bold py-3.5 px-6 rounded-2xl transition-colors text-base"
                   >
-                    {isContactOnly ? 'Enviar Otra Solicitud' : 'Agendar Otra Cita'}
+                    {isContactOnly ? t.booking.bookAnotherBtnContact : t.booking.bookAnotherBtnBooking}
                   </button>
 
                   <a
@@ -348,7 +411,7 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                     className="flex-1 bg-brand-blue hover:bg-brand-hover text-white font-bold py-3.5 px-6 rounded-2xl transition-colors text-base inline-flex items-center justify-center gap-2"
                   >
                     <Phone className="w-5 h-5 text-amber-300" />
-                    <span>Llamar al (442) 374-2450</span>
+                    <span>{t.topBar?.callUs ? `${t.topBar.callUs} (442) 374-2450` : 'Llamar al (442) 374-2450'}</span>
                   </a>
                 </div>
               </div>
@@ -369,14 +432,15 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
               <div>
                 <label className="block text-base sm:text-lg font-black text-navy-900 mb-3 flex items-center gap-2">
                   <span className="w-7 h-7 bg-brand-blue text-white rounded-full text-sm flex items-center justify-center font-bold">1</span>
-                  <span>Seleccione el Tratamiento o Consulta</span>
+                  <span>{t.booking.step1}</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {t.booking.serviceOptions.map((opt, i) => {
                     const isOptionContact =
                       opt === "Nos conectamos contigo" ||
                       opt === "We'll Contact You" ||
-                      opt?.toLowerCase().includes("conectamos");
+                      opt?.toLowerCase().includes("conectamos") ||
+                      opt?.toLowerCase().includes("contact you");
                     return (
                       <button
                         key={i}
@@ -408,10 +472,10 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                     <PhoneCall className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-extrabold text-emerald-900 text-base">
-                        ¡Nos comunicaremos directamente con usted!
+                        {lang === 'es' ? '¡Nos comunicaremos directamente con usted!' : "We'll get in touch with you directly!"}
                       </p>
                       <p className="text-emerald-800 text-xs sm:text-sm mt-0.5 leading-relaxed">
-                        {t.booking.contactOnlyNote || "No es necesario seleccionar fecha ni horario. Complete sus datos de contacto y nuestro equipo le llamará o escribirá a la brevedad."}
+                        {t.booking.contactOnlyNote}
                       </p>
                     </div>
                   </div>
@@ -423,7 +487,7 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                 <div>
                   <label className="block text-base sm:text-lg font-black text-navy-900 mb-3 flex items-center gap-2">
                     <span className="w-7 h-7 bg-brand-blue text-white rounded-full text-sm flex items-center justify-center font-bold">2</span>
-                    <span>Seleccione Fecha y Horario</span>
+                    <span>{t.booking.step2}</span>
                   </label>
 
                   {/* Quick days buttons */}
@@ -460,7 +524,7 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                   {/* Time selection buttons */}
                   <div>
                     <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Horas Disponibles:
+                      {t.booking.availableHours}
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {['08:30 AM', '09:30 AM', '10:30 AM', '11:30 AM', '01:30 PM', '02:30 PM', '03:30 PM', '04:15 PM'].map((slot) => (
@@ -488,40 +552,41 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                   <span className="w-7 h-7 bg-brand-blue text-white rounded-full text-sm flex items-center justify-center font-bold">
                     {isContactOnly ? '2' : '3'}
                   </span>
-                  <span>{isContactOnly ? 'Sus Datos de Contacto' : 'Datos del Paciente'}</span>
+                  <span>{isContactOnly ? t.booking.step3ContactOnly : t.booking.step3}</span>
                 </label>
 
+                {/* Separate First Name & Last Name (Matching A2P 10DLC specifications) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Name */}
+                  {/* First Name */}
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">
-                      Nombre Completo:
+                      {t.booking.firstNameLabel}
                     </label>
                     <div className="relative">
                       <User className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        placeholder="Ej. Roberto Gómez"
-                        value={patientName}
-                        onChange={(e) => setPatientName(e.target.value)}
+                        placeholder={t.booking.firstNamePlaceholder}
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
                         className="w-full pl-12 pr-4 py-3 text-base font-semibold bg-white border-2 border-slate-300 rounded-xl focus:border-brand-blue"
                         required
                       />
                     </div>
                   </div>
 
-                  {/* Phone */}
+                  {/* Last Name */}
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">
-                      Teléfono de Contacto:
+                      {t.booking.lastNameLabel}
                     </label>
                     <div className="relative">
-                      <Phone className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <User className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                       <input
-                        type="tel"
-                        placeholder="(442) 000-0000"
-                        value={patientPhone}
-                        onChange={(e) => setPatientPhone(e.target.value)}
+                        type="text"
+                        placeholder={t.booking.lastNamePlaceholder}
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
                         className="w-full pl-12 pr-4 py-3 text-base font-semibold bg-white border-2 border-slate-300 rounded-xl focus:border-brand-blue"
                         required
                       />
@@ -529,16 +594,34 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                   </div>
                 </div>
 
+                {/* Phone */}
+                <div className="mt-4">
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">
+                    {t.booking.phoneLabel}
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="tel"
+                      placeholder={t.booking.phonePlaceholder}
+                      value={patientPhone}
+                      onChange={(e) => setPatientPhone(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 text-base font-semibold bg-white border-2 border-slate-300 rounded-xl focus:border-brand-blue"
+                      required
+                    />
+                  </div>
+                </div>
+
                 {/* Email for Calendar Invitation */}
                 <div className="mt-4">
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5">
-                    Correo Electrónico (Para recibir confirmación):
+                    {t.booking.emailLabel}
                   </label>
                   <div className="relative">
                     <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input
                       type="email"
-                      placeholder="paciente@gmail.com"
+                      placeholder={t.booking.emailPlaceholder}
                       value={patientEmail}
                       onChange={(e) => setPatientEmail(e.target.value)}
                       className="w-full pl-12 pr-4 py-3 text-base font-semibold bg-white border-2 border-slate-300 rounded-xl focus:border-brand-blue"
@@ -546,17 +629,14 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                     />
                   </div>
                   <span className="block text-xs text-slate-500 mt-1">
-                    {isContactOnly
-                      ? 'Le enviaremos un correo de confirmación de su solicitud.'
-                      : 'Le enviaremos la invitación de la cita a este correo tanto a usted como a la clínica.'
-                    }
+                    {isContactOnly ? t.booking.emailNoteContact : t.booking.emailNoteBooking}
                   </span>
                 </div>
 
                 {/* Mobility Assistance */}
                 <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200">
                   <label className="block text-xs font-bold text-navy-900 mb-2 uppercase">
-                    ¿Requiere asistencia de movilidad o silla de ruedas al llegar?
+                    {t.booking.wheelchairPrompt}
                   </label>
                   <div className="flex flex-wrap gap-4 text-sm font-semibold">
                     <label className="inline-flex items-center gap-2 cursor-pointer text-slate-700">
@@ -568,7 +648,7 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                         onChange={(e) => setWheelchairHelp(e.target.value)}
                         className="w-4 h-4 text-brand-blue"
                       />
-                      <span>No, me desplazo con normalidad</span>
+                      <span>{t.booking.wheelchairNo}</span>
                     </label>
                     <label className="inline-flex items-center gap-2 cursor-pointer text-slate-700">
                       <input
@@ -579,7 +659,7 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                         onChange={(e) => setWheelchairHelp(e.target.value)}
                         className="w-4 h-4 text-brand-blue"
                       />
-                      <span>Sí, agradeceré apoyo en la entrada</span>
+                      <span>{t.booking.wheelchairYes}</span>
                     </label>
                   </div>
                 </div>
@@ -587,11 +667,11 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                 {/* Notes */}
                 <div className="mt-4">
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-                    {isContactOnly ? '¿En qué horario o tema prefiere que le contactemos? (Opcional):' : 'Notas adicionales (Opcional):'}
+                    {isContactOnly ? t.booking.notesLabelContact : t.booking.notesLabelBooking}
                   </label>
                   <input
                     type="text"
-                    placeholder={isContactOnly ? "Ej. Prefiero llamada por la mañana, consulta de dentadura..." : "Escriba aquí alguna preferencia o duda..."}
+                    placeholder={isContactOnly ? t.booking.notesPlaceholderContact : t.booking.notesPlaceholderBooking}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:border-brand-blue"
@@ -631,7 +711,11 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                         {consentErrorTransactional && (
                           <p className="text-xs font-bold text-rose-600 mt-1.5 flex items-center gap-1">
                             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                            <span>Debe marcar esta casilla para poder {isContactOnly ? 'contactarlo' : 'agendar su cita'}.</span>
+                            <span>
+                              {lang === 'es'
+                                ? `Debe marcar esta casilla para poder ${isContactOnly ? 'contactarlo' : 'agendar su cita'}.`
+                                : `You must check this box to ${isContactOnly ? 'be contacted' : 'schedule your appointment'}.`}
+                            </span>
                           </p>
                         )}
                       </div>
@@ -668,7 +752,11 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                         {consentErrorMarketing && (
                           <p className="text-xs font-bold text-rose-600 mt-1.5 flex items-center gap-1">
                             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                            <span>Debe marcar esta casilla para poder {isContactOnly ? 'contactarlo' : 'agendar su cita'}.</span>
+                            <span>
+                              {lang === 'es'
+                                ? `Debe marcar esta casilla para poder ${isContactOnly ? 'contactarlo' : 'agendar su cita'}.`
+                                : `You must check this box to ${isContactOnly ? 'be contacted' : 'schedule your appointment'}.`}
+                            </span>
                           </p>
                         )}
                       </div>
@@ -721,15 +809,15 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                   {isContactOnly ? (
                     <>
                       <PhoneCall className="w-5 h-5 text-amber-300" />
-                      <span>{isSubmitting ? 'Enviando solicitud...' : (t.booking.contactMeBtn || 'Contáctenme')}</span>
+                      <span>{isSubmitting ? (t.booking.submittingBtnContact || 'Enviando solicitud...') : (t.booking.contactMeBtn || 'Contáctenme')}</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-5 h-5" />
                       <span>
                         {isSubmitting
-                          ? 'Agendando y Enviando Invitación...'
-                          : `Confirmar Cita para el ${date} a las ${timeSlot}`
+                          ? (t.booking.submittingBtnBooking || 'Agendando y Enviando Invitación...')
+                          : t.booking.confirmBtn.replace('{date}', date).replace('{time}', timeSlot)
                         }
                       </span>
                     </>
@@ -737,10 +825,7 @@ export default function AppointmentSection({ t, initialService = "", onNavigate 
                 </button>
 
                 <p className="text-center text-xs text-slate-500 mt-2.5">
-                  {isContactOnly
-                    ? 'Al presionar "Contáctenme", nuestro equipo recibirá sus datos para comunicarse con usted a la brevedad.'
-                    : 'Al confirmar, se enviará la invitación por correo electrónico tanto a usted como a la clínica.'
-                  }
+                  {isContactOnly ? t.booking.submitNoteContact : t.booking.submitNoteBooking}
                 </p>
               </div>
 

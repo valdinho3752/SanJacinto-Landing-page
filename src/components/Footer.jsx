@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone, MapPin, Clock, ShieldCheck, Heart } from 'lucide-react';
 
-export default function Footer({ t, onNavigate }) {
+export default function Footer({ t, lang = 'es', onNavigate }) {
   const googleMapsUrl = "https://maps.app.goo.gl/staj4b6FonERcXFR7";
 
   return (
@@ -27,12 +27,12 @@ export default function Footer({ t, onNavigate }) {
             </div>
 
             <p className="text-slate-400 text-sm leading-relaxed max-w-md">
-              {t.footer.tagline} Devolvemos la firmeza, la dignidad y el confort de masticar sin dolor ni inseguridades.
+              {t.footer.tagline} {t.footer.taglineEnd}
             </p>
 
             <div className="inline-flex items-center gap-2 bg-navy-800/80 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-lg border border-navy-700">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Instalaciones 100% accesibles para adultos mayores</span>
+              <span>{t.footer.seniorAccessibleBadge}</span>
             </div>
           </div>
 
@@ -43,25 +43,25 @@ export default function Footer({ t, onNavigate }) {
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#inicio" className="hover:text-amber-300 transition-colors">Inicio</a>
+                <a href="#inicio" className="hover:text-amber-300 transition-colors">{t.footer.navHome}</a>
               </li>
               <li>
-                <a href="#caso-real" className="hover:text-amber-300 transition-colors">Muestra de Trabajo Real</a>
+                <a href="#caso-real" className="hover:text-amber-300 transition-colors">{t.footer.navWork}</a>
               </li>
               <li>
-                <a href="#precios" className="hover:text-amber-300 transition-colors">Precios y Tratamientos</a>
+                <a href="#precios" className="hover:text-amber-300 transition-colors">{t.footer.navPricing}</a>
               </li>
               <li>
-                <a href="#implantes" className="hover:text-amber-300 transition-colors">Fijación con Implantes</a>
+                <a href="#implantes" className="hover:text-amber-300 transition-colors">{t.footer.navImplants}</a>
               </li>
               <li>
-                <a href="#citas" className="hover:text-amber-300 transition-colors">Apartar Cita en Línea</a>
+                <a href="#citas" className="hover:text-amber-300 transition-colors">{t.footer.navBooking}</a>
               </li>
               <li>
-                <a href="#resenas" className="hover:text-amber-300 transition-colors">Testimonios de Pacientes</a>
+                <a href="#resenas" className="hover:text-amber-300 transition-colors">{t.footer.navReviews}</a>
               </li>
               <li>
-                <a href="#ubicacion" className="hover:text-amber-300 transition-colors">Ubicación y Mapa</a>
+                <a href="#ubicacion" className="hover:text-amber-300 transition-colors">{t.footer.navLocation}</a>
               </li>
             </ul>
           </div>
@@ -74,7 +74,7 @@ export default function Footer({ t, onNavigate }) {
             
             <div className="space-y-3 text-sm">
               <div>
-                <span className="text-xs text-slate-400 block font-semibold">Línea Directa:</span>
+                <span className="text-xs text-slate-400 block font-semibold">{t.footer.directLine}</span>
                 <a 
                   href="tel:+14423742450" 
                   className="text-lg font-black text-amber-300 hover:underline inline-flex items-center gap-1.5"
@@ -85,15 +85,15 @@ export default function Footer({ t, onNavigate }) {
               </div>
 
               <div>
-                <span className="text-xs text-slate-400 block font-semibold">Horario:</span>
+                <span className="text-xs text-slate-400 block font-semibold">{t.footer.hoursLabel}</span>
                 <p className="text-slate-300 text-xs">
-                  Lun a Vie: 8:00 AM - 5:00 PM<br />
-                  Sábados: 9:00 AM - 2:00 PM
+                  {t.footer.hoursMonFri}<br />
+                  {t.footer.hoursSat}
                 </p>
               </div>
 
               <div>
-                <span className="text-xs text-slate-400 block font-semibold">Ubicación:</span>
+                <span className="text-xs text-slate-400 block font-semibold">{t.footer.locationLabel}</span>
                 <a 
                   href={googleMapsUrl} 
                   target="_blank" 
@@ -101,7 +101,7 @@ export default function Footer({ t, onNavigate }) {
                   className="text-sky-300 hover:text-white text-xs underline inline-flex items-center gap-1 mt-0.5"
                 >
                   <MapPin className="w-3.5 h-3.5" />
-                  <span>San Jacinto, CA (Ver en Google Maps)</span>
+                  <span>{t.footer.viewOnMaps}</span>
                 </a>
               </div>
             </div>
@@ -146,9 +146,9 @@ export default function Footer({ t, onNavigate }) {
           </div>
 
           <p className="flex items-center gap-1">
-            <span>Atención dedicada con</span>
+            <span>{t.footer.careWithLove}</span>
             <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-            <span>para nuestros adultos mayores</span>
+            <span>{t.footer.forSeniors}</span>
           </p>
         </div>
 

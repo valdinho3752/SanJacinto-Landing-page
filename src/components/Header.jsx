@@ -51,7 +51,7 @@ export default function Header({
               aria-label="Toggle text size for readability"
             >
               {isLargeText ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
-              <span>{isLargeText ? 'Texto Normal' : 'Texto Grande (A+)'}</span>
+              <span>{isLargeText ? (t.topBar.normalTextBtn || 'Texto Normal') : (t.topBar.largeTextBtn || 'Texto Grande (A+)')}</span>
             </button>
 
             {/* Language switch */}

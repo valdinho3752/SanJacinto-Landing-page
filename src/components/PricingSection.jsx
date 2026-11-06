@@ -88,7 +88,7 @@ export default function PricingSection({
                       </div>
                     </div>
                     <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300">
-                      Garantizado
+                      {t.services.guaranteedBadge || (lang === 'es' ? 'Garantizado' : 'Guaranteed')}
                     </span>
                   </div>
 
@@ -108,7 +108,7 @@ export default function PricingSection({
                               : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                           }`}
                         >
-                          {t.cart.upper} (Arriba)
+                          {t.services.upperArchBtn || (lang === 'es' ? 'Superior (Arriba)' : 'Upper Arch')}
                         </button>
                         <button
                           type="button"
@@ -119,7 +119,7 @@ export default function PricingSection({
                               : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                           }`}
                         >
-                          {t.cart.lower} (Abajo)
+                          {t.services.lowerArchBtn || (lang === 'es' ? 'Inferior (Abajo)' : 'Lower Arch')}
                         </button>
                       </div>
                     </div>

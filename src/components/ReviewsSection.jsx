@@ -38,7 +38,7 @@ export default function ReviewsSection({ t, lang }) {
                   </div>
                   <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Verificado</span>
+                    <span>{t.reviews.verified || (lang === 'es' ? 'Verificado' : 'Verified')}</span>
                   </span>
                 </div>
 
@@ -75,7 +75,7 @@ export default function ReviewsSection({ t, lang }) {
         {/* Reassurance Banner under reviews */}
         <div className="mt-12 bg-white rounded-2xl p-6 border-2 border-dashed border-slate-300 text-center max-w-3xl mx-auto">
           <p className="text-base text-slate-700 font-medium">
-            <span className="font-bold text-navy-900">¿Desea una segunda opinión o revisar su dentadura actual?</span> Le atendemos con la misma paciencia y respeto que a nuestros propios padres y abuelos.
+            <span className="font-bold text-navy-900">{t.reviews.reassuranceTitle}</span> {t.reviews.reassuranceDesc}
           </p>
         </div>
 
