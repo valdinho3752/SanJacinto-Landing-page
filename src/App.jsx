@@ -141,11 +141,11 @@ export default function App() {
   };
 
   if (currentRoute === 'terms') {
-    return <TermsPage onBackToHome={() => navigateTo('/')} lang={lang} setLang={setLang} />;
+    return <TermsPage onBackToHome={() => navigateTo('/')} onNavigate={navigateTo} lang={lang} setLang={setLang} />;
   }
 
   if (currentRoute === 'privacy') {
-    return <PrivacyPage onBackToHome={() => navigateTo('/')} lang={lang} setLang={setLang} />;
+    return <PrivacyPage onBackToHome={() => navigateTo('/')} onNavigate={navigateTo} lang={lang} setLang={setLang} />;
   }
 
   return (

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ShieldCheck, Lock, Phone, MapPin, CheckCircle, Mail } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Lock, Phone, MapPin, CheckCircle, Mail, ExternalLink } from 'lucide-react';
 
-export default function PrivacyPage({ onBackToHome, lang: initialLang = 'es', setLang: setGlobalLang }) {
+export default function PrivacyPage({ onBackToHome, onNavigate, lang: initialLang = 'es', setLang: setGlobalLang }) {
   const [lang, setLocalLang] = useState(initialLang);
 
   useEffect(() => {
@@ -15,6 +15,15 @@ export default function PrivacyPage({ onBackToHome, lang: initialLang = 'es', se
   const handleLangChange = (newLang) => {
     setLocalLang(newLang);
     if (setGlobalLang) setGlobalLang(newLang);
+  };
+
+  const handleLinkClick = (e, path) => {
+    e.preventDefault();
+    if (onNavigate) {
+      onNavigate(path);
+    } else {
+      window.location.href = path;
+    }
   };
 
   const isEs = lang === 'es';
@@ -265,13 +274,20 @@ export default function PrivacyPage({ onBackToHome, lang: initialLang = 'es', se
             </p>
           </div>
 
-          <div className="text-center pt-4">
+          <div className="text-center pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={onBackToHome}
-              className="px-8 py-3.5 bg-brand-blue hover:bg-brand-hover text-white font-black rounded-2xl shadow transition-all"
+              className="w-full sm:w-auto px-8 py-3.5 bg-brand-blue hover:bg-brand-hover text-white font-black rounded-2xl shadow transition-all"
             >
               ← {isEs ? 'Regresar a la Página Principal' : 'Back to Home Page'}
             </button>
+            <a
+              href="/terminos&condiciones"
+              onClick={(e) => handleLinkClick(e, '/terminos&condiciones')}
+              className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-navy-900 font-bold rounded-2xl border border-slate-300 transition-all text-center text-sm"
+            >
+              {isEs ? 'Ver Términos y Condiciones →' : 'View Terms of Service →'}
+            </a>
           </div>
 
         </div>

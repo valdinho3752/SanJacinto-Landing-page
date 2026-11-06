@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ShieldCheck, FileText, Phone, MapPin, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, FileText, Phone, MapPin, CheckCircle, Clock, ExternalLink } from 'lucide-react';
 
-export default function TermsPage({ onBackToHome, lang: initialLang = 'es', setLang: setGlobalLang }) {
+export default function TermsPage({ onBackToHome, onNavigate, lang: initialLang = 'es', setLang: setGlobalLang }) {
   const [lang, setLocalLang] = useState(initialLang);
 
   useEffect(() => {
@@ -15,6 +15,15 @@ export default function TermsPage({ onBackToHome, lang: initialLang = 'es', setL
   const handleLangChange = (newLang) => {
     setLocalLang(newLang);
     if (setGlobalLang) setGlobalLang(newLang);
+  };
+
+  const handleLinkClick = (e, path) => {
+    e.preventDefault();
+    if (onNavigate) {
+      onNavigate(path);
+    } else {
+      window.location.href = path;
+    }
   };
 
   const isEs = lang === 'es';
@@ -115,7 +124,7 @@ export default function TermsPage({ onBackToHome, lang: initialLang = 'es', setL
             </p>
           </section>
 
-          {/* Section 3: SMS Terms (A2P 10DLC & TCPA Compliance) */}
+          {/* Section 3: SMS Terms (A2P 10DLC & TCPA Strict Compliance) */}
           <section className="p-6 bg-blue-50/60 rounded-2xl border-2 border-brand-blue/30 space-y-4">
             <div className="flex items-center gap-2.5 text-brand-blue">
               <ShieldCheck className="w-6 h-6 shrink-0" />
@@ -128,56 +137,97 @@ export default function TermsPage({ onBackToHome, lang: initialLang = 'es', setL
 
             <p className="text-slate-700 text-sm leading-relaxed">
               {isEs ? (
-                <>Al proporcionar su número de teléfono móvil y marcar las casillas de consentimiento en nuestros formularios de contacto o de agendación de citas, usted otorga su consentimiento expreso para recibir mensajes de texto de <strong>San Jacinto Center for Implants and Dentures</strong> bajo las siguientes condiciones:</>
+                <>Al proporcionar su número de teléfono móvil y marcar voluntariamente las casillas de consentimiento en nuestros formularios de contacto o de agendación de citas, usted otorga su consentimiento expreso para recibir mensajes de texto de <strong>San Jacinto Center for Implants and Dentures</strong> bajo las siguientes condiciones:</>
               ) : (
-                <>By providing your mobile phone number and opting into communication on our contact or appointment scheduling forms, you grant express consent to receive SMS text messages from <strong>San Jacinto Center for Implants and Dentures</strong> under the following terms:</>
+                <>By providing your mobile phone number and voluntarily opting into communication on our contact or appointment scheduling forms, you grant express consent to receive SMS text messages from <strong>San Jacinto Center for Implants and Dentures</strong> under the following terms:</>
               )}
             </p>
 
-            <ul className="space-y-2.5 text-xs sm:text-sm text-slate-700 list-disc pl-5">
+            <ul className="space-y-3 text-xs sm:text-sm text-slate-700 list-disc pl-5">
+              {/* 1. Descripción de casos de uso de SMS */}
               <li>
-                <strong>{isEs ? 'Tipos de Mensajes:' : 'Types of Messages:'}</strong>{' '}
+                <strong>{isEs ? 'Descripción de Casos de Uso de SMS:' : 'SMS Use Cases Description:'}</strong>{' '}
                 {isEs 
-                  ? 'Mensajes transaccionales (confirmaciones de citas, recordatorios de consulta, avisos de reprogramación y seguimiento clínico) y mensajes informativos o promocionales relacionados con el cuidado dental de la clínica.'
-                  : 'Transactional messages (appointment confirmations, consultation reminders, rescheduling notifications, and clinical follow-ups) and informational or promotional dental health messages.'}
+                  ? 'Mensajes transaccionales (confirmaciones de citas, recordatorios de consulta, reprogramaciones de horario, notificaciones de seguimiento post-consulta y atención al paciente) y mensajes informativos o promocionales relacionados con el cuidado dental y tratamientos de la clínica.'
+                  : 'Transactional messages (appointment confirmations, visit reminders, schedule changes, follow-up notifications, and customer support) and informational or promotional updates regarding denture care and clinic treatments.'}
               </li>
+
+              {/* 2. Divulgación de la frecuencia de mensajes */}
               <li>
                 <strong>{isEs ? 'Frecuencia de los Mensajes:' : 'Message Frequency:'}</strong>{' '}
                 {isEs 
                   ? 'La frecuencia de los mensajes puede variar según la actividad de sus citas y solicitudes de consulta (Message frequency may vary).'
-                  : 'Message frequency may vary based on your appointment scheduling activity and consultation requests.'}
+                  : 'Message frequency may vary based on your appointment scheduling activity and consultation requests (Message frequency may vary).'}
               </li>
+
+              {/* 3. Divulgación de tarifas de mensajes y datos */}
               <li>
-                <strong>{isEs ? 'Tarifas:' : 'Fees & Rates:'}</strong>{' '}
+                <strong>{isEs ? 'Divulgación de Tarifas de Mensajes y Datos:' : 'Message & Data Rates Disclosure:'}</strong>{' '}
                 {isEs 
                   ? 'Pueden aplicar tarifas estándar de mensajes y datos según su proveedor de telefonía móvil (Message & data rates may apply).'
-                  : 'Standard message and data rates may apply as determined by your mobile carrier.'}
+                  : 'Standard message and data rates may apply according to your wireless service provider contract (Message & data rates may apply).'}
               </li>
+
+              {/* 4. Contacto de atención al cliente (HELP) */}
               <li>
-                <strong>{isEs ? 'Cómo obtener Ayuda (HELP):' : 'How to Get Help (HELP):'}</strong>{' '}
+                <strong>{isEs ? 'Contacto de Atención al Cliente (HELP):' : 'Customer Care & Support (HELP):'}</strong>{' '}
                 {isEs 
-                  ? 'Puede responder con la palabra HELP a cualquier mensaje que reciba de nuestra parte para obtener asistencia, o comunicarse directamente al +1 (442) 374-2450.'
-                  : 'You can text HELP to any message received from us for immediate assistance, or call us directly at +1 (442) 374-2450.'}
+                  ? 'Puede responder con la palabra HELP a cualquier mensaje que reciba de nuestra parte para obtener asistencia inmediata, o comunicarse directamente con nuestro personal al teléfono +1 (442) 374-2450 o al correo electrónico de la clínica.'
+                  : 'You can text HELP to any message received from us for immediate assistance, or contact our customer support team directly at +1 (442) 374-2450.'}
               </li>
+
+              {/* 5. Instrucciones para darse de baja (STOP) */}
               <li>
-                <strong>{isEs ? 'Cómo Darse de Baja (STOP):' : 'How to Opt-Out (STOP):'}</strong>{' '}
+                <strong>{isEs ? 'Instrucciones para Darse de Baja (STOP):' : 'Opt-Out Instructions (STOP):'}</strong>{' '}
                 {isEs 
-                  ? 'Puede cancelar o revocar su consentimiento para recibir mensajes SMS en cualquier momento respondiendo con la palabra STOP a cualquiera de nuestros mensajes. Tras enviar STOP, recibirá un mensaje final confirmando su baja.'
-                  : 'You can cancel or revoke your SMS consent at any time by replying STOP to any message. You will receive one final confirmation text acknowledging your opt-out.'}
+                  ? 'Puede cancelar o revocar su consentimiento para recibir mensajes SMS en cualquier momento respondiendo con la palabra STOP a cualquiera de nuestros mensajes de texto. Tras enviar STOP, recibirá un único mensaje final confirmando que su suscripción ha sido cancelada.'
+                  : 'You can cancel or revoke your SMS consent at any time by replying STOP to any text message from us. Upon texting STOP, you will receive a single final confirmation message acknowledging your opt-out.'}
               </li>
+
+              {/* 6. Exención de responsabilidad del operador */}
               <li>
-                <strong>{isEs ? 'Exclusión de Responsabilidad de Operadores:' : 'Carrier Liability Disclaimer:'}</strong>{' '}
+                <strong>{isEs ? 'Exención de Responsabilidad del Operador:' : 'Carrier Liability Exemption:'}</strong>{' '}
                 {isEs 
-                  ? 'Los operadores de telecomunicaciones móviles no son responsables de mensajes retrasados o no entregados.'
-                  : 'Mobile carriers are not liable for delayed or undelivered text messages.'}
+                  ? 'Los operadores de telecomunicaciones móviles (incluidos AT&T, T-Mobile, Verizon y demás operadoras) no son legalmente responsables de mensajes de texto retrasados o no entregados (Carriers are not liable for delayed or undelivered messages).'
+                  : 'Mobile carriers (including AT&T, T-Mobile, Verizon, and associated wireless providers) are not liable for delayed or undelivered messages.'}
+              </li>
+
+              {/* 7. Restricción de edad (18+) */}
+              <li>
+                <strong>{isEs ? 'Restricción de Edad (18+):' : 'Age Restriction (18+):'}</strong>{' '}
+                {isEs 
+                  ? 'Para suscribirse a nuestro servicio de mensajería SMS y agendar citas en línea, usted debe tener al menos 18 años de edad o contar con la debida autorización de su padre, madre o tutor legal.'
+                  : 'To subscribe to our SMS messaging program and submit booking requests, you verify that you are at least 18 years of age or have obtained the valid consent of a parent or legal guardian.'}
               </li>
             </ul>
 
-            <div className="pt-2 text-xs font-bold text-navy-900 bg-white p-3.5 rounded-xl border border-blue-200">
-              🔒 <strong>{isEs ? 'Cláusula de No Compartición:' : 'Non-Sharing Clause:'}</strong>{' '}
-              {isEs 
-                ? 'No compartimos, vendemos ni alquilamos su consentimiento de mensajería ni sus números de teléfono móvil a terceros ni empresas afiliadas para fines de comercialización o publicidad.'
-                : 'No mobile information will be shared with third parties/affiliates for marketing/promotional purposes. All the above categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.'}
+            {/* 8. Enlace a la Política de Privacidad & Cláusula de no compartición */}
+            <div className="pt-3 bg-white p-4 rounded-xl border border-blue-200 space-y-2.5">
+              <div className="text-xs font-bold text-navy-900">
+                🔒 <strong>{isEs ? 'Cláusula de No Compartición de Datos Móviles:' : 'Strict Mobile Information Non-Sharing Policy:'}</strong>{' '}
+                <span className="font-normal text-slate-700">
+                  {isEs 
+                    ? 'No compartimos, vendemos ni alquilamos su consentimiento de mensajería ni sus números de teléfono móvil a terceros ni empresas afiliadas para fines de comercialización o publicidad.'
+                    : 'No mobile information will be shared with third parties/affiliates for marketing/promotional purposes. All the above categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.'}
+                </span>
+              </div>
+
+              {/* Explicit Clickable Link to Privacy Policy */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium">
+                  {isEs 
+                    ? 'Consulte todos los detalles sobre el resguardo de su privacidad en nuestra:' 
+                    : 'Review complete details on our privacy protections in our:'}
+                </span>
+                <a
+                  href="/politicas-de-privasidad"
+                  onClick={(e) => handleLinkClick(e, '/politicas-de-privasidad')}
+                  className="inline-flex items-center gap-1 font-bold text-brand-blue hover:underline"
+                >
+                  <span>{isEs ? 'Política de Privacidad' : 'Privacy Policy'}</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </div>
           </section>
 
@@ -224,13 +274,20 @@ export default function TermsPage({ onBackToHome, lang: initialLang = 'es', setL
             </p>
           </div>
 
-          <div className="text-center pt-4">
+          <div className="text-center pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={onBackToHome}
-              className="px-8 py-3.5 bg-brand-blue hover:bg-brand-hover text-white font-black rounded-2xl shadow transition-all"
+              className="w-full sm:w-auto px-8 py-3.5 bg-brand-blue hover:bg-brand-hover text-white font-black rounded-2xl shadow transition-all"
             >
               ← {isEs ? 'Regresar a la Página Principal' : 'Back to Home Page'}
             </button>
+            <a
+              href="/politicas-de-privasidad"
+              onClick={(e) => handleLinkClick(e, '/politicas-de-privasidad')}
+              className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-navy-900 font-bold rounded-2xl border border-slate-300 transition-all text-center text-sm"
+            >
+              {isEs ? 'Ver Política de Privacidad →' : 'View Privacy Policy →'}
+            </a>
           </div>
 
         </div>
