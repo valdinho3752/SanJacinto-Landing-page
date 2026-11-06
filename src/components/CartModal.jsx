@@ -108,10 +108,22 @@ export default function CartModal({
           body: JSON.stringify({
             type: 'cart_order',
             patientName: patientName.trim(),
+            firstName,
+            lastName,
             patientPhone: patientPhone.trim(),
+            phone: patientPhone.trim(),
             patientEmail: patientEmail.trim(),
+            email: patientEmail.trim(),
+            service: `Pedido de Carrito ($${totalAmount} USD)`,
+            treatment: `Pedido de Carrito: ${itemsSummary}`,
+            selectedDate: 'Pedido desde Carrito',
+            date: 'Pedido desde Carrito',
+            selectedTime: 'Por coordinar',
+            time: 'Por coordinar',
             notes: patientNotes.trim(),
             orderCode: code,
+            appointmentCode: code,
+            calendarId: calendarConfig.googleCalendarId,
             items: cartItems.map(i => `${i.name} (${i.arch === 'both' ? 'Set Completo' : i.arch === 'upper' ? 'Superior' : 'Inferior'}) x${i.quantity} - $${i.price * i.quantity} USD`).join('\n'),
             totalAmount: totalAmount
           })
