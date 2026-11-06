@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone, MapPin, Clock, ShieldCheck, Heart } from 'lucide-react';
 
-export default function Footer({ t }) {
+export default function Footer({ t, onNavigate }) {
   const googleMapsUrl = "https://maps.app.goo.gl/staj4b6FonERcXFR7";
 
   return (
@@ -112,6 +112,39 @@ export default function Footer({ t }) {
         {/* Bottom bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <p>© {new Date().getFullYear()} {t.footer.rights}</p>
+          
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <a
+              href="/terminos&condiciones"
+              onClick={(e) => {
+                e.preventDefault();
+                if (onNavigate) {
+                  onNavigate('/terminos&condiciones');
+                } else {
+                  window.location.href = '/terminos&condiciones';
+                }
+              }}
+              className="hover:text-amber-300 transition-colors underline"
+            >
+              {t.booking?.termsLabel || "Términos y Condiciones"}
+            </a>
+            <span>•</span>
+            <a
+              href="/politicas-de-privasidad"
+              onClick={(e) => {
+                e.preventDefault();
+                if (onNavigate) {
+                  onNavigate('/politicas-de-privasidad');
+                } else {
+                  window.location.href = '/politicas-de-privasidad';
+                }
+              }}
+              className="hover:text-amber-300 transition-colors underline"
+            >
+              {t.booking?.privacyLabel || "Política de Privacidad"}
+            </a>
+          </div>
+
           <p className="flex items-center gap-1">
             <span>Atención dedicada con</span>
             <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />

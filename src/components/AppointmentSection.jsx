@@ -7,7 +7,7 @@ import {
 import { calendarConfig } from '../config/calendarConfig';
 import { sendLeadConnectorAppointment } from '../services/leadConnectorService';
 
-export default function AppointmentSection({ t, initialService = "" }) {
+export default function AppointmentSection({ t, initialService = "", onNavigate }) {
   const [selectedService, setSelectedService] = useState(
     initialService || t.booking.serviceOptions[0]
   );
@@ -48,6 +48,12 @@ export default function AppointmentSection({ t, initialService = "" }) {
   const [patientEmail, setPatientEmail] = useState('');
   const [wheelchairHelp, setWheelchairHelp] = useState('no');
   const [notes, setNotes] = useState('');
+
+  // Estados de consentimiento (A2P 10DLC & TCPA) - marcados automáticamente por defecto
+  const [consentTransactional, setConsentTransactional] = useState(true);
+  const [consentMarketing, setConsentMarketing] = useState(true);
+  const [consentErrorTransactional, setConsentErrorTransactional] = useState(false);
+  const [consentErrorMarketing, setConsentErrorMarketing] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -90,6 +96,31 @@ export default function AppointmentSection({ t, initialService = "" }) {
       return;
     }
 
+    // Validación de casillas de consentimiento obligatorio
+    let hasConsentError = false;
+    if (!consentTransactional) {
+      setConsentErrorTransactional(true);
+      hasConsentError = true;
+    } else {
+      setConsentErrorTransactional(false);
+    }
+
+    if (!consentMarketing) {
+      setConsentErrorMarketing(true);
+      hasConsentError = true;
+    } else {
+      setConsentErrorMarketing(false);
+    }
+
+    if (hasConsentError) {
+      setFormError(
+        isContactOnly
+          ? 'Debe marcar las casillas de consentimiento para poder solicitar que le contactemos.'
+          : 'Debe marcar las casillas de consentimiento para poder agendar su cita.'
+      );
+      return;
+    }
+
     setFormError('');
     setIsSubmitting(true);
     const prefix = isContactOnly ? 'SJ-CONTACT-' : 'SJ-';
@@ -114,7 +145,9 @@ export default function AppointmentSection({ t, initialService = "" }) {
       appointmentDate: isContactOnly ? "Por coordinar / Contactar" : date,
       appointmentTime: isContactOnly ? "Por coordinar / Contactar" : timeSlot,
       wheelchairAssistance: wheelchairAssistanceText,
-      notes: notes.trim()
+      notes: notes.trim(),
+      consentTransactional,
+      consentMarketing
     });
 
     // 2. Enviar payload a Google Apps Script Webhook (Google Calendar)
@@ -157,6 +190,10 @@ export default function AppointmentSection({ t, initialService = "" }) {
     setPatientPhone('');
     setPatientEmail('');
     setNotes('');
+    setConsentTransactional(true);
+    setConsentMarketing(true);
+    setConsentErrorTransactional(false);
+    setConsentErrorMarketing(false);
   };
 
   const generateWhatsAppUrl = () => {
@@ -559,6 +596,118 @@ export default function AppointmentSection({ t, initialService = "" }) {
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:border-brand-blue"
                   />
+                </div>
+
+                {/* Consent Checkboxes (A2P 10DLC & TCPA Compliance) */}
+                <div className="mt-5 space-y-3">
+                  
+                  {/* Checkbox 1: Transactional */}
+                  <div
+                    className={`p-3.5 rounded-2xl border-2 transition-all ${
+                      consentErrorTransactional
+                        ? 'border-rose-500 bg-rose-50/90 ring-2 ring-rose-200'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <label className="flex items-start gap-3 cursor-pointer select-none text-xs leading-relaxed text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={consentTransactional}
+                        onChange={(e) => {
+                          setConsentTransactional(e.target.checked);
+                          if (e.target.checked) {
+                            setConsentErrorTransactional(false);
+                            if (consentMarketing) setFormError('');
+                          }
+                        }}
+                        className={`w-4 h-4 mt-0.5 rounded shrink-0 cursor-pointer ${
+                          consentErrorTransactional
+                            ? 'text-rose-600 border-rose-500 focus:ring-rose-500'
+                            : 'text-brand-blue border-slate-300 focus:ring-brand-blue'
+                        }`}
+                      />
+                      <div>
+                        <span>{t.booking.smsConsentTransactional}</span>
+                        {consentErrorTransactional && (
+                          <p className="text-xs font-bold text-rose-600 mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>Debe marcar esta casilla para poder {isContactOnly ? 'contactarlo' : 'agendar su cita'}.</span>
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Checkbox 2: Marketing / Promotional */}
+                  <div
+                    className={`p-3.5 rounded-2xl border-2 transition-all ${
+                      consentErrorMarketing
+                        ? 'border-rose-500 bg-rose-50/90 ring-2 ring-rose-200'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <label className="flex items-start gap-3 cursor-pointer select-none text-xs leading-relaxed text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={consentMarketing}
+                        onChange={(e) => {
+                          setConsentMarketing(e.target.checked);
+                          if (e.target.checked) {
+                            setConsentErrorMarketing(false);
+                            if (consentTransactional) setFormError('');
+                          }
+                        }}
+                        className={`w-4 h-4 mt-0.5 rounded shrink-0 cursor-pointer ${
+                          consentErrorMarketing
+                            ? 'text-rose-600 border-rose-500 focus:ring-rose-500'
+                            : 'text-brand-blue border-slate-300 focus:ring-brand-blue'
+                        }`}
+                      />
+                      <div>
+                        <span>{t.booking.smsConsentMarketing}</span>
+                        {consentErrorMarketing && (
+                          <p className="text-xs font-bold text-rose-600 mt-1.5 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>Debe marcar esta casilla para poder {isContactOnly ? 'contactarlo' : 'agendar su cita'}.</span>
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Discreet Links to Terms and Privacy Policy */}
+                  <div className="flex items-center justify-center gap-3 text-xs text-slate-500 pt-1">
+                    <a
+                      href="/terminos&condiciones"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (onNavigate) {
+                          onNavigate('/terminos&condiciones');
+                        } else {
+                          window.location.href = '/terminos&condiciones';
+                        }
+                      }}
+                      className="underline hover:text-brand-blue transition-colors font-semibold"
+                    >
+                      {t.booking.termsLabel || 'Términos y Condiciones'}
+                    </a>
+                    <span>•</span>
+                    <a
+                      href="/politicas-de-privasidad"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (onNavigate) {
+                          onNavigate('/politicas-de-privasidad');
+                        } else {
+                          window.location.href = '/politicas-de-privasidad';
+                        }
+                      }}
+                      className="underline hover:text-brand-blue transition-colors font-semibold"
+                    >
+                      {t.booking.privacyLabel || 'Política de Privacidad'}
+                    </a>
+                  </div>
+
                 </div>
               </div>
 

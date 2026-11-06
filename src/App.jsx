@@ -9,6 +9,8 @@ import ReviewsSection from './components/ReviewsSection';
 import MapSection from './components/MapSection';
 import Footer from './components/Footer';
 import CartModal from './components/CartModal';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
 import { translations } from './data/translations';
 import { Phone, ShoppingCart, Calendar } from 'lucide-react';
 
@@ -17,6 +19,32 @@ export default function App() {
   const [isLargeText, setIsLargeText] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [bookingService, setBookingService] = useState('');
+
+  // Routing for Terms and Privacy pages
+  const getInitialRoute = () => {
+    try {
+      const path = decodeURIComponent(window.location.pathname).toLowerCase();
+      if (path.includes('terminos')) return 'terms';
+      if (path.includes('politica') || path.includes('privasidad') || path.includes('privacidad') || path.includes('privacy')) return 'privacy';
+    } catch (e) {}
+    return 'home';
+  };
+
+  const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentRoute(getInitialRoute());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path);
+    setCurrentRoute(getInitialRoute());
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Cart state initialized from localStorage
   const [cartItems, setCartItems] = useState(() => {
@@ -112,6 +140,14 @@ export default function App() {
     }
   };
 
+  if (currentRoute === 'terms') {
+    return <TermsPage onBackToHome={() => navigateTo('/')} lang={lang} />;
+  }
+
+  if (currentRoute === 'privacy') {
+    return <PrivacyPage onBackToHome={() => navigateTo('/')} lang={lang} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
       
@@ -160,6 +196,7 @@ export default function App() {
         <AppointmentSection 
           t={t} 
           initialService={bookingService} 
+          onNavigate={navigateTo}
         />
 
         {/* Real Patient Reviews */}
@@ -175,7 +212,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <Footer t={t} />
+      <Footer t={t} onNavigate={navigateTo} />
 
       {/* Shopping Cart Modal */}
       <CartModal

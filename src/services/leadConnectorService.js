@@ -12,7 +12,9 @@ export const sendLeadConnectorAppointment = async ({
   appointmentDate,
   appointmentTime,
   wheelchairAssistance,
-  notes
+  notes,
+  consentTransactional = true,
+  consentMarketing = true
 }) => {
   try {
     const myHeaders = new Headers();
@@ -35,7 +37,10 @@ export const sendLeadConnectorAppointment = async ({
       appointmentDate: appointmentDate || "",
       appointmentTime: appointmentTime || "",
       wheelchairAssistance: wheelchairAssistance || "No, me desplazo con normalidad",
-      notes: notes || ""
+      notes: notes || "",
+      consentTransactional: consentTransactional ? "Yes" : "No",
+      consentMarketing: consentMarketing ? "Yes" : "No",
+      smsConsent: consentTransactional ? "Yes" : "No"
     });
 
     const requestOptions = {
