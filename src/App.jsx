@@ -11,6 +11,7 @@ import Footer from './components/Footer';
 import CartModal from './components/CartModal';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
+import ReschedulePage from './pages/ReschedulePage';
 import { translations } from './data/translations';
 import { Phone, ShoppingCart, Calendar } from 'lucide-react';
 
@@ -20,12 +21,13 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [bookingService, setBookingService] = useState('');
 
-  // Routing for Terms and Privacy pages
+  // Routing for Terms, Privacy and Reschedule pages
   const getInitialRoute = () => {
     try {
       const path = decodeURIComponent(window.location.pathname).toLowerCase();
       if (path.includes('terminos')) return 'terms';
       if (path.includes('politica') || path.includes('privasidad') || path.includes('privacidad') || path.includes('privacy')) return 'privacy';
+      if (path.includes('reagendacion') || path.includes('reagendar') || path.includes('reschedule')) return 'reschedule';
     } catch (e) {}
     return 'home';
   };
@@ -146,6 +148,10 @@ export default function App() {
 
   if (currentRoute === 'privacy') {
     return <PrivacyPage onBackToHome={() => navigateTo('/')} onNavigate={navigateTo} lang={lang} setLang={setLang} />;
+  }
+
+  if (currentRoute === 'reschedule') {
+    return <ReschedulePage onBackToHome={() => navigateTo('/')} onNavigate={navigateTo} lang={lang} setLang={setLang} t={t} />;
   }
 
   return (
